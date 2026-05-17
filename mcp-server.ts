@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -7,7 +8,11 @@ import { registerSecret, redact } from "./src/security.ts";
 import * as toolFactories from "./src/tools/index.ts";
 
 const cfg: ResolvedConfig = resolveInstances(process.env);
-for (const inst of Object.values(cfg.instances)) registerSecret(inst.password);
+for (const inst of Object.values(cfg.instances)) {
+  registerSecret(inst.password);
+  const basicValue = "Basic " + Buffer.from(`${inst.username}:${inst.password}`).toString("base64");
+  registerSecret(basicValue);
+}
 
 const getClient = (name?: string) => new AdGuardClient(getInstanceConfig(cfg, name));
 
