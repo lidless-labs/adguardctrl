@@ -1,3 +1,4 @@
+<!-- content-guard: allow private-ipv4 file -->
 # adguard-mcp
 
 MCP server exposing AdGuard Home read/write tools across one or more instances. 28 tools (11 reads / 12 safe-writes / 5 destructive). Three-tier write gating: reads are open, writes require `confirm: true`, destructive ops require `confirm: true` + `destructive: true`.

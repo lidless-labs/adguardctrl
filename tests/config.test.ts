@@ -1,3 +1,4 @@
+// content-guard: allow private-ipv4 file
 import { describe, it, expect } from "vitest";
 import {
   resolveInstances,

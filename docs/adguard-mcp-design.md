@@ -1,3 +1,4 @@
+<!-- content-guard: allow private-ipv4 file -->
 # adguard-mcp Design
 
 A Model Context Protocol server that lets AI agents drive AdGuard Home instances over the documented REST API. Lets Claude (and any other MCP-compatible agent) read status/stats/query log and manage user rules, filter list subscriptions, and per-client blocked services across one or more local AdGuard Home boxes.

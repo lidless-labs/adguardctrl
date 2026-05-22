@@ -1,3 +1,4 @@
+<!-- content-guard: allow private-ipv4 file -->
 # adguard-mcp v0.2 Implementation Plan
 
 **Goal:** Add 13 tools to the existing adguard-mcp surface (15 -> 28), bumping to v0.2.0.

@@ -1,3 +1,4 @@
+// content-guard: allow private-ipv4 file
 import { describe, it, expect, afterEach } from "vitest";
 import { startFakeAdGuard, FakeAdGuard } from "../fake-adguard.ts";
 import { AdGuardClient } from "../../src/adguard-client.ts";
