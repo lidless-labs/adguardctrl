@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { startFakeAdGuard, FakeAdGuard } from "./fake-adguard.ts";
 import { AdGuardClient } from "../src/adguard-client.ts";
+import { AdGuardSyncClient } from "../src/adguard-sync-client.ts";
 import * as toolFactories from "../src/tools/index.ts";
 import { buildAllTools } from "../src/tools/index.ts";
 
@@ -11,12 +12,13 @@ describe("integration", () => {
   // Pulls from the same canonical registration array used by both the MCP stdio
   // entry (mcp-server.ts) and the OpenClaw plugin entry (index.ts). If a new tool
   // is added to src/tools/index.ts but not to buildAllTools, this test breaks.
-  it("buildAllTools registers all 28 production tools with unique names", () => {
+  it("buildAllTools registers all 33 production tools with unique names", () => {
     const dummy = () => new AdGuardClient({ url: "http://x", username: "u", password: "p" });
-    const created = buildAllTools(dummy);
-    expect(created).toHaveLength(28);
+    const syncDummy = () => new AdGuardSyncClient({ url: "http://sync" });
+    const created = buildAllTools(dummy, syncDummy);
+    expect(created).toHaveLength(33);
     const names = created.map((t) => t.name);
-    expect(new Set(names).size).toBe(28);
+    expect(new Set(names).size).toBe(33);
     for (const n of names) expect(n).toMatch(/^adguard_/);
   });
 

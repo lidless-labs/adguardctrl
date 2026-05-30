@@ -7,6 +7,10 @@ import {
   NoInstancesError,
   PartialInstanceConfigError,
   UnknownDefaultInstanceError,
+  resolveSyncConfig,
+  getSyncConfig,
+  NoSyncServerError,
+  PartialSyncConfigError,
 } from "../src/config.ts";
 
 describe("resolveInstances", () => {
@@ -75,6 +79,58 @@ describe("resolveInstances", () => {
       ADGUARD_DEFAULT_INSTANCE: "tertiary",
     };
     expect(() => resolveInstances(env)).toThrow(UnknownDefaultInstanceError);
+  });
+});
+
+describe("resolveSyncConfig", () => {
+  it("returns undefined when AdGuardHome Sync is not configured", () => {
+    expect(resolveSyncConfig({})).toBeUndefined();
+  });
+
+  it("parses an unauthenticated AdGuardHome Sync API URL", () => {
+    expect(resolveSyncConfig({ ADGUARDHOME_SYNC_URL: "http://sync-host:8080" })).toEqual({
+      url: "http://sync-host:8080",
+    });
+  });
+
+  it("supports ADGUARD_SYNC_* as an alias without treating it as an AdGuard Home instance", () => {
+    const env = {
+      ADGUARD_PRIMARY_URL: "http://192.168.1.10",
+      ADGUARD_PRIMARY_USERNAME: "admin",
+      ADGUARD_PRIMARY_PASSWORD: "secret",
+      ADGUARD_SYNC_URL: "http://sync-host:8080",
+      ADGUARD_SYNC_USERNAME: "sync",
+      ADGUARD_SYNC_PASSWORD: "sync-secret",
+    };
+    expect(Object.keys(resolveInstances(env).instances)).toEqual(["primary"]);
+    expect(resolveSyncConfig(env)).toEqual({
+      url: "http://sync-host:8080",
+      username: "sync",
+      password: "sync-secret",
+    });
+  });
+
+  it("parses authenticated AdGuardHome Sync API config", () => {
+    expect(resolveSyncConfig({
+      ADGUARDHOME_SYNC_URL: "http://sync-host:8080",
+      ADGUARDHOME_SYNC_USERNAME: "sync",
+      ADGUARDHOME_SYNC_PASSWORD: "secret",
+    })).toEqual({
+      url: "http://sync-host:8080",
+      username: "sync",
+      password: "secret",
+    });
+  });
+
+  it("throws on partial AdGuardHome Sync auth config", () => {
+    expect(() => resolveSyncConfig({
+      ADGUARDHOME_SYNC_URL: "http://sync-host:8080",
+      ADGUARDHOME_SYNC_USERNAME: "sync",
+    })).toThrow(PartialSyncConfigError);
+  });
+
+  it("throws when getting an unconfigured Sync server", () => {
+    expect(() => getSyncConfig(undefined)).toThrow(NoSyncServerError);
   });
 });
 

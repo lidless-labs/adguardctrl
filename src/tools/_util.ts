@@ -1,5 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import type { AdGuardClient } from "../adguard-client.ts";
+import type { AdGuardSyncClient } from "../adguard-sync-client.ts";
 import type { ResolvedConfig } from "../config.ts";
 import { getInstanceConfig } from "../config.ts";
 
@@ -8,6 +9,7 @@ export const InstanceArg = Type.Optional(Type.String({
 }));
 
 export type ClientFactory = (instance?: string) => AdGuardClient;
+export type SyncClientFactory = () => AdGuardSyncClient;
 
 export function jsonToolResult(payload: unknown) {
   return {

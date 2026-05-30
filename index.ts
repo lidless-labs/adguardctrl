@@ -6,8 +6,9 @@
 // `unknown` to bridge the intentional structural mismatch.
 import { Buffer } from "node:buffer";
 import { definePluginEntry, type AnyAgentTool } from "openclaw/plugin-sdk/plugin-entry";
-import { resolveInstances, getInstanceConfig, type ResolvedConfig } from "./src/config.ts";
+import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, type ResolvedConfig, type SyncConfig } from "./src/config.ts";
 import { AdGuardClient } from "./src/adguard-client.ts";
+import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import { registerSecret, redact } from "./src/security.ts";
 import { buildAllTools } from "./src/tools/index.ts";
 
@@ -44,6 +45,20 @@ function makeFactory(cfg: ResolvedConfig) {
   };
 }
 
+function registerSyncSecrets(syncCfg: SyncConfig | undefined) {
+  if (!syncCfg?.password) return;
+  registerSecret(syncCfg.password);
+  if (syncCfg.username) {
+    const basicValue = "Basic " + Buffer.from(`${syncCfg.username}:${syncCfg.password}`).toString("base64");
+    registerSecret(basicValue);
+  }
+}
+
+function makeSyncFactory(syncCfg: SyncConfig | undefined) {
+  registerSyncSecrets(syncCfg);
+  return () => new AdGuardSyncClient(getSyncConfig(syncCfg));
+}
+
 export default definePluginEntry({
   id: "adguard",
   name: "AdGuard",
@@ -51,8 +66,10 @@ export default definePluginEntry({
   register(api) {
     if (api.registrationMode !== "full") return;
     const cfg = resolveInstances(process.env);
+    const syncCfg = resolveSyncConfig(process.env);
     const getClient = makeFactory(cfg);
+    const getSyncClient = makeSyncFactory(syncCfg);
     const register = (t: ToolLike) => api.registerTool(withRedactedErrors(t) as unknown as AnyAgentTool);
-    for (const t of buildAllTools(getClient)) register(t as unknown as ToolLike);
+    for (const t of buildAllTools(getClient, getSyncClient)) register(t as unknown as ToolLike);
   },
 });

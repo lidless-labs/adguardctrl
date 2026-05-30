@@ -1,11 +1,11 @@
 <!-- content-guard: allow private-ipv4 file -->
 # adguard-mcp
 
-MCP server exposing AdGuard Home read/write tools across one or more instances. 28 tools (11 reads / 12 safe-writes / 5 destructive). Three-tier write gating: reads are open, writes require `confirm: true`, destructive ops require `confirm: true` + `destructive: true`.
+MCP server exposing AdGuard Home read/write tools across one or more instances, plus AdGuardHome Sync status and control. 33 tools (14 reads / 13 safe-writes / 6 destructive). Three-tier write gating: reads are open, writes require `confirm: true`, destructive ops require `confirm: true` + `destructive: true`.
 
 ## Tools
 
-**Reads (11):** `adguard_status`, `adguard_stats`, `adguard_query_log`, `adguard_list_filter_lists`, `adguard_list_user_rules`, `adguard_list_clients`, `adguard_list_blocked_services_catalog`, `adguard_check_host`, `adguard_get_blocked_services`, `adguard_get_dns_config`, `adguard_get_safesearch_settings`.
+**Reads (14):** `adguard_status`, `adguard_stats`, `adguard_query_log`, `adguard_list_filter_lists`, `adguard_list_user_rules`, `adguard_list_clients`, `adguard_list_blocked_services_catalog`, `adguard_check_host`, `adguard_get_blocked_services`, `adguard_get_dns_config`, `adguard_get_safesearch_settings`, `adguard_sync_status`, `adguard_sync_health`, `adguard_sync_logs`.
 
 | Tool | Description |
 |---|---|
@@ -20,8 +20,11 @@ MCP server exposing AdGuard Home read/write tools across one or more instances. 
 | `adguard_get_blocked_services` | Global blocked-services list + weekly schedule (`GET /control/blocked_services/get`). |
 | `adguard_get_dns_config` | DNS upstreams, bootstrap, cache, parallel resolution, blocking mode (`GET /control/dns_info`). |
 | `adguard_get_safesearch_settings` | SafeSearch enabled state + per-engine flags (`GET /control/safesearch/status`). |
+| `adguard_sync_status` | AdGuardHome Sync origin/replica status (`GET /api/v1/status`). |
+| `adguard_sync_health` | AdGuardHome Sync health check (`HEAD /healthz`). |
+| `adguard_sync_logs` | AdGuardHome Sync in-memory logs (`GET /api/v1/logs`). |
 
-**Safe writes (12, require `confirm: true`):** `adguard_add_user_rule`, `adguard_remove_user_rule`, `adguard_add_filter_list`, `adguard_remove_filter_list`, `adguard_toggle_filter_list`, `adguard_set_client_blocked_services`, `adguard_refresh_filter_lists`, `adguard_add_client`, `adguard_update_client`, `adguard_set_blocked_services`, `adguard_toggle_safesearch`, `adguard_toggle_safebrowsing`.
+**Safe writes (13, require `confirm: true`):** `adguard_add_user_rule`, `adguard_remove_user_rule`, `adguard_add_filter_list`, `adguard_remove_filter_list`, `adguard_toggle_filter_list`, `adguard_set_client_blocked_services`, `adguard_refresh_filter_lists`, `adguard_add_client`, `adguard_update_client`, `adguard_set_blocked_services`, `adguard_toggle_safesearch`, `adguard_toggle_safebrowsing`, `adguard_sync_run`.
 
 | Tool | Description |
 |---|---|
@@ -37,8 +40,9 @@ MCP server exposing AdGuard Home read/write tools across one or more instances. 
 | `adguard_set_blocked_services` | Set GLOBAL blocked services + optional weekly schedule; accepts HH:MM strings or ms (`PUT /control/blocked_services/update`). |
 | `adguard_toggle_safesearch` | Enable or disable SafeSearch globally with per-engine flags (`PUT /control/safesearch/settings`). |
 | `adguard_toggle_safebrowsing` | Enable or disable AGH SafeBrowsing (`POST /control/safebrowsing/enable` or `/disable`). |
+| `adguard_sync_run` | Trigger AdGuardHome Sync immediately (`POST /api/v1/sync`). |
 
-**Destructive (5, require `confirm: true` + `destructive: true`):** `adguard_replace_user_rules`, `adguard_toggle_protection`, `adguard_delete_client`, `adguard_clear_query_log`, `adguard_reset_stats`.
+**Destructive (6, require `confirm: true` + `destructive: true`):** `adguard_replace_user_rules`, `adguard_toggle_protection`, `adguard_delete_client`, `adguard_clear_query_log`, `adguard_reset_stats`, `adguard_sync_clear_logs`.
 
 | Tool | Description |
 |---|---|
@@ -47,6 +51,7 @@ MCP server exposing AdGuard Home read/write tools across one or more instances. 
 | `adguard_delete_client` | Remove a configured named client; per-client rules and stats are lost (`POST /control/clients/delete`). |
 | `adguard_clear_query_log` | Wipe the DNS query log (`POST /control/querylog_clear`). |
 | `adguard_reset_stats` | Zero the stats window (`POST /control/stats_reset`). |
+| `adguard_sync_clear_logs` | Clear AdGuardHome Sync in-memory logs (`POST /api/v1/clear-logs`). |
 
 ## Configuration
 
@@ -69,6 +74,20 @@ ADGUARD_DEFAULT_INSTANCE=primary
 Instance names are derived from the env-var middle segment (case-insensitive). Add `ADGUARD_LIVINGROOM_URL/USERNAME/PASSWORD` and the MCP picks it up on next start.
 
 Every tool accepts optional `instance: "<name>"` to address a non-default box.
+
+AdGuardHome Sync is optional and uses a separate env prefix so it does not collide with AdGuard Home instance names:
+
+```
+ADGUARDHOME_SYNC_URL=http://192.0.2.10:8080
+
+# Optional, only when the Sync API is configured with Basic auth:
+ADGUARDHOME_SYNC_USERNAME=sync
+ADGUARDHOME_SYNC_PASSWORD=<password>
+```
+
+`ADGUARD_SYNC_URL/USERNAME/PASSWORD` is also accepted as an alias and is reserved for the Sync server, not an AdGuard Home instance named `sync`.
+
+If neither Sync URL env var is set, Sync tools remain listed but return a clear config error when called.
 
 ## Install
 

@@ -1,33 +1,35 @@
-export interface AdGuardClientOptions {
+export interface AdGuardSyncClientOptions {
   retryDelayMs?: number;
 }
 
-export class AdGuardClientError extends Error {
-  constructor(public status: number, message: string) {
-    super(`AdGuard ${status}: ${message}`);
-    this.name = "AdGuardClientError";
-  }
-}
-
-export class AdGuardUnreachableError extends Error {
-  constructor(cause: string) {
-    super(`AdGuard unreachable: ${cause}`);
-    this.name = "AdGuardUnreachableError";
-  }
-}
-
-export interface ClientInstanceConfig {
+export interface SyncClientConfig {
   url: string;
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
 }
 
-export class AdGuardClient {
-  private authHeader: string;
+export class AdGuardSyncClientError extends Error {
+  constructor(public status: number, message: string) {
+    super(`AdGuardHome Sync ${status}: ${message}`);
+    this.name = "AdGuardSyncClientError";
+  }
+}
+
+export class AdGuardSyncUnreachableError extends Error {
+  constructor(cause: string) {
+    super(`AdGuardHome Sync unreachable: ${cause}`);
+    this.name = "AdGuardSyncUnreachableError";
+  }
+}
+
+export class AdGuardSyncClient {
+  private authHeader: string | undefined;
   private retryDelayMs: number;
 
-  constructor(private cfg: ClientInstanceConfig, opts: AdGuardClientOptions = {}) {
-    this.authHeader = "Basic " + Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64");
+  constructor(private cfg: SyncClientConfig, opts: AdGuardSyncClientOptions = {}) {
+    if (cfg.username && cfg.password) {
+      this.authHeader = "Basic " + Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64");
+    }
     this.retryDelayMs = opts.retryDelayMs ?? 1000;
   }
 
@@ -35,17 +37,19 @@ export class AdGuardClient {
     return this.request<T>("GET", path);
   }
 
-  async post<T = unknown>(path: string, body: unknown): Promise<T> {
+  async post<T = unknown>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, body);
   }
 
-  async put<T = unknown>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("PUT", path, body);
+  async head(path: string): Promise<{ ok: boolean }> {
+    await this.request<void>("HEAD", path);
+    return { ok: true };
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = this.cfg.url.replace(/\/+$/, "") + path;
-    const headers: Record<string, string> = { authorization: this.authHeader };
+    const headers: Record<string, string> = {};
+    if (this.authHeader) headers.authorization = this.authHeader;
     let bodyStr: string | undefined;
     if (body !== undefined) {
       headers["content-type"] = "application/json";
@@ -56,25 +60,26 @@ export class AdGuardClient {
       try {
         const res = await fetch(url, { method, headers, body: bodyStr });
         if (res.status >= 200 && res.status < 300) {
+          if (method === "HEAD") return undefined as T;
           const text = await res.text();
           return parseSuccessBody<T>(text);
         }
         if (res.status >= 500) {
-          lastErr = new AdGuardUnreachableError(`HTTP ${res.status}`);
+          lastErr = new AdGuardSyncUnreachableError(`HTTP ${res.status}`);
           if (attempt === 0) await sleep(this.retryDelayMs);
           continue;
         }
         const errText = await res.text();
         let msg = errText;
         try { msg = (JSON.parse(errText) as { message?: string }).message ?? errText; } catch {}
-        throw new AdGuardClientError(res.status, msg);
+        throw new AdGuardSyncClientError(res.status, msg);
       } catch (e) {
-        if (e instanceof AdGuardClientError) throw e;
-        lastErr = new AdGuardUnreachableError((e as Error).message);
+        if (e instanceof AdGuardSyncClientError) throw e;
+        lastErr = new AdGuardSyncUnreachableError((e as Error).message);
         if (attempt === 0) await sleep(this.retryDelayMs);
       }
     }
-    throw lastErr ?? new AdGuardUnreachableError("unknown");
+    throw lastErr ?? new AdGuardSyncUnreachableError("unknown");
   }
 }
 

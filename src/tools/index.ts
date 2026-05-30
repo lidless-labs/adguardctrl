@@ -26,7 +26,12 @@ import { createAdguardToggleSafebrowsingTool } from "./adguard_toggle_safebrowsi
 import { createAdguardDeleteClientTool } from "./adguard_delete_client.ts";
 import { createAdguardClearQueryLogTool } from "./adguard_clear_query_log.ts";
 import { createAdguardResetStatsTool } from "./adguard_reset_stats.ts";
-import type { ClientFactory } from "./_util.ts";
+import { createAdguardSyncStatusTool } from "./adguard_sync_status.ts";
+import { createAdguardSyncHealthTool } from "./adguard_sync_health.ts";
+import { createAdguardSyncLogsTool } from "./adguard_sync_logs.ts";
+import { createAdguardSyncRunTool } from "./adguard_sync_run.ts";
+import { createAdguardSyncClearLogsTool } from "./adguard_sync_clear_logs.ts";
+import type { ClientFactory, SyncClientFactory } from "./_util.ts";
 
 export {
   createAdguardStatusTool,
@@ -57,6 +62,11 @@ export {
   createAdguardDeleteClientTool,
   createAdguardClearQueryLogTool,
   createAdguardResetStatsTool,
+  createAdguardSyncStatusTool,
+  createAdguardSyncHealthTool,
+  createAdguardSyncLogsTool,
+  createAdguardSyncRunTool,
+  createAdguardSyncClearLogsTool,
 };
 
 /**
@@ -64,7 +74,7 @@ export {
  * Both `mcp-server.ts` (stdio MCP entry) and `index.ts` (OpenClaw plugin entry)
  * register from this single source so the production tool count stays in lockstep.
  */
-export function buildAllTools(getClient: ClientFactory) {
+export function buildAllTools(getClient: ClientFactory, getSyncClient: SyncClientFactory) {
   return [
     // Tier 1: reads
     createAdguardStatusTool(getClient),
@@ -78,6 +88,9 @@ export function buildAllTools(getClient: ClientFactory) {
     createAdguardGetBlockedServicesTool(getClient),
     createAdguardGetDnsConfigTool(getClient),
     createAdguardGetSafesearchSettingsTool(getClient),
+    createAdguardSyncStatusTool(getSyncClient),
+    createAdguardSyncHealthTool(getSyncClient),
+    createAdguardSyncLogsTool(getSyncClient),
     // Tier 2: safe writes (confirm: true)
     createAdguardAddUserRuleTool(getClient),
     createAdguardRemoveUserRuleTool(getClient),
@@ -91,11 +104,13 @@ export function buildAllTools(getClient: ClientFactory) {
     createAdguardSetBlockedServicesTool(getClient),
     createAdguardToggleSafesearchTool(getClient),
     createAdguardToggleSafebrowsingTool(getClient),
+    createAdguardSyncRunTool(getSyncClient),
     // Tier 3: destructive (confirm: true + destructive: true)
     createAdguardReplaceUserRulesTool(getClient),
     createAdguardToggleProtectionTool(getClient),
     createAdguardDeleteClientTool(getClient),
     createAdguardClearQueryLogTool(getClient),
     createAdguardResetStatsTool(getClient),
+    createAdguardSyncClearLogsTool(getSyncClient),
   ];
 }

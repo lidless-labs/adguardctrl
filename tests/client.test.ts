@@ -48,6 +48,15 @@ describe("AdGuardClient", () => {
     expect(JSON.parse(fake.requests[0].body)).toEqual({ rules: ["||example.com^"] });
   });
 
+  it("treats successful non-JSON responses as success without retrying", async () => {
+    fake = await startFakeAdGuard([
+      { method: "POST", path: "/control/querylog_clear", status: 200, body: "OK" },
+    ]);
+    const c = new AdGuardClient({ url: fake.baseUrl, username: "u", password: "p" }, { retryDelayMs: 5 });
+    await expect(c.post("/control/querylog_clear", undefined)).resolves.toBe("OK");
+    expect(fake.requests).toHaveLength(1);
+  });
+
   it("emits PUT with JSON body", async () => {
     fake = await startFakeAdGuard([
       { method: "PUT", path: "/control/blocked_services/update", status: 200, body: {} },

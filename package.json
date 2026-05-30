@@ -1,7 +1,7 @@
 {
   "name": "@solomonneas/adguard-mcp",
-  "version": "0.2.0",
-  "description": "MCP server exposing AdGuard Home read + write tools across one or more instances",
+  "version": "0.3.0",
+  "description": "MCP server exposing AdGuard Home and AdGuardHome Sync tools",
   "type": "module",
   "openclaw": {
     "extensions": ["./index.ts"],
