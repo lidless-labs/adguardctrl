@@ -8,3 +8,7 @@ npm-debug.log*
 .DS_Store
 coverage/
 .nyc_output/
+
+# Local brigade memory (cards are local-only, never committed)
+/memory/
+.brigade/
