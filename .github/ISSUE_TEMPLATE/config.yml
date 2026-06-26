@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Lidless Labs (the tool hub)
+    url: https://lidless.dev/adguard-mcp
+    about: Project page with the capability overview and client config. Browse there before filing.
+  - name: Security report
+    url: https://github.com/lidless-labs/adguard-mcp/security/policy
+    about: Do not file security issues publicly. See SECURITY.md.

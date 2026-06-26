@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a new AdGuard Home / Sync tool, an argument, or a behavior change.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: Describe the task from the operator's side, not the implementation. What can't you do today?
+      placeholder: |
+        I want to ask my assistant to <X> against my AdGuard Home box, but there is no tool for it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed tool or change
+      description: If you have a specific AdGuard Home endpoint or argument in mind, name it. Note which write tier you think it belongs in (read, safe write, or destructive).
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Existing tools, the web dashboard, raw API calls, etc.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This targets self-hosted AdGuard Home (or AdGuardHome Sync), not AdGuard's hosted DNS product.
+          required: true

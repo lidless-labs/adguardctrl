@@ -1,0 +1,62 @@
+name: Bug report
+description: A tool returns the wrong result, fails, leaks a credential, or behaves differently from its description.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Which tool did you call, with what arguments, and what did you expect versus what you got?
+      placeholder: |
+        I called `adguard_toggle_filter_list` with `confirm: true` and got X.
+        I expected Y.
+      value: |
+        Do not paste real credentials, real AdGuard Home URLs, or unredacted paths.
+        Use documentation IPs (192.0.2.x) when you need to show a URL shape.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: adguard-mcp version
+      description: The version you installed (e.g. from `npm ls -g @solomonneas/adguard-mcp`).
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      description: Which client was calling the server?
+      placeholder: Claude Desktop, Claude Code, Codex CLI, OpenClaw, Hermes, etc.
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      placeholder: 20.x
+    validations:
+      required: true
+  - type: input
+    id: adguard
+    attributes:
+      label: AdGuard Home version
+      placeholder: v0.107.x
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Tool output / error
+      description: Paste the tool result or error. Keep enough to reproduce, but redact anything sensitive.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: scrub
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I have removed real credentials, real hostnames or AdGuard Home URLs, and unredacted paths from this report.
+          required: true
