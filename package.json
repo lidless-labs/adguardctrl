@@ -47,5 +47,5 @@
   },
   "engines": { "node": ">=20" },
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/solomonneas/adguard-mcp" }
+  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguard-mcp" }
 }
