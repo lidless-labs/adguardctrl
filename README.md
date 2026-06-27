@@ -1,4 +1,8 @@
 <!-- content-guard: allow private-ipv4 file -->
+<p align="center">
+  <img src="docs/assets/adguard-mcp-banner.jpg" alt="adguard-mcp banner" width="900">
+</p>
+
 <h1 align="center">adguard-mcp</h1>
 
 <p align="center">
@@ -6,14 +10,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/npm/v/@solomonneas/adguard-mcp?style=for-the-badge&label=npm" alt="npm version">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT license">
-  <img src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge" alt="MCP server">
-  <img src="https://img.shields.io/badge/status-WIP-orange?style=for-the-badge" alt="Work in progress">
+  <a href="https://lidless.dev/adguard-mcp"><strong>Website</strong></a>
 </p>
 
 <p align="center">
-  <a href="https://lidless.dev/adguard-mcp"><strong>Website</strong></a>
+  <img src="https://img.shields.io/npm/v/@solomonneas/adguard-mcp?style=for-the-badge&logo=npm&label=npm" alt="npm version">
+  <img src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge" alt="MCP server">
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT license">
 </p>
 
 adguard-mcp is an MCP server for AdGuard Home, the self-hosted DNS sinkhole. It exists so you can inspect and tune network-wide DNS filtering from an AI assistant instead of clicking through a web dashboard across every box. What sets it apart from a raw HTTP wrapper is a three-tier write gate: reads are open, writes require an explicit `confirm: true`, and destructive operations additionally require `destructive: true`, so an agent cannot turn off filtering or overwrite the rules block by accident.
@@ -21,6 +24,40 @@ adguard-mcp is an MCP server for AdGuard Home, the self-hosted DNS sinkhole. It 
 ## What it does
 
 adguard-mcp is an open-source MCP server for AdGuard Home that exposes DNS-filtering control to any Model Context Protocol client (Claude Desktop, Claude Code, Codex CLI, OpenClaw, Hermes). It speaks the AdGuard Home API across one or more instances, plus optional AdGuardHome Sync status and control, and surfaces 33 tools split into three gating tiers: 14 reads, 13 safe writes, and 6 destructive operations. Reads cover server status, stats, the DNS query log, filter lists, named clients, and a `check_host` lookup that shows exactly what AdGuard would do with a hostname. Writes manage user rules, filter-list subscriptions, per-client blocked services, SafeSearch, SafeBrowsing, and global protection, each behind the gate. It is built for homelab operators running one or several AdGuard Home boxes who want to query and adjust DNS filtering from an assistant without handing it an unguarded admin API.
+
+## Quickstart
+
+Install globally:
+
+```
+npm install -g @solomonneas/adguard-mcp
+```
+
+Or run via npx with no install:
+
+```
+npx -y @solomonneas/adguard-mcp
+```
+
+Then wire it into an MCP client. The minimal config for any client that speaks the standard `mcpServers` shape (Claude Desktop, Claude Code):
+
+```json
+{
+  "mcpServers": {
+    "adguard": {
+      "command": "npx",
+      "args": ["-y", "@solomonneas/adguard-mcp"],
+      "env": {
+        "ADGUARD_PRIMARY_URL": "http://192.0.2.10",
+        "ADGUARD_PRIMARY_USERNAME": "admin",
+        "ADGUARD_PRIMARY_PASSWORD": "your-password"
+      }
+    }
+  }
+}
+```
+
+Once connected, ask your client to call `adguard_status` to confirm it can reach the box. Reads work immediately; writes need the `confirm: true` flag and destructive ops also need `destructive: true`.
 
 ## Tools
 
@@ -71,40 +108,6 @@ adguard-mcp is an open-source MCP server for AdGuard Home that exposes DNS-filte
 | `adguard_clear_query_log` | Wipe the DNS query log (`POST /control/querylog_clear`). |
 | `adguard_reset_stats` | Zero the stats window (`POST /control/stats_reset`). |
 | `adguard_sync_clear_logs` | Clear AdGuardHome Sync in-memory logs (`POST /api/v1/clear-logs`). |
-
-## Quickstart
-
-Install globally:
-
-```
-npm install -g @solomonneas/adguard-mcp
-```
-
-Or run via npx with no install:
-
-```
-npx -y @solomonneas/adguard-mcp
-```
-
-Then wire it into an MCP client. The minimal config for any client that speaks the standard `mcpServers` shape (Claude Desktop, Claude Code):
-
-```json
-{
-  "mcpServers": {
-    "adguard": {
-      "command": "npx",
-      "args": ["-y", "@solomonneas/adguard-mcp"],
-      "env": {
-        "ADGUARD_PRIMARY_URL": "http://192.0.2.10",
-        "ADGUARD_PRIMARY_USERNAME": "admin",
-        "ADGUARD_PRIMARY_PASSWORD": "your-password"
-      }
-    }
-  }
-}
-```
-
-Once connected, ask your client to call `adguard_status` to confirm it can reach the box. Reads work immediately; writes need the `confirm: true` flag and destructive ops also need `destructive: true`.
 
 ## Configuration
 
