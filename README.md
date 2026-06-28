@@ -145,6 +145,33 @@ ADGUARDHOME_SYNC_PASSWORD=<password>
 
 If neither Sync URL env var is set, Sync tools remain listed but return a clear config error when called.
 
+## CLI
+
+The same package ships a read-only operator CLI, `adguardctl`, for shells, cron, and CI. It shares the `AdGuardClient` / `AdGuardSyncClient` core with the MCP server and reads the same env config. It exposes only the Tier-1 read tools; writes stay in the MCP/plugin surface behind the tier gates.
+
+```bash
+npx @solomonneas/adguard-mcp@latest status
+# or, installed globally:
+adguardctl status
+adguardctl stats
+adguardctl querylog --limit 20 --blocked-only
+adguardctl check-host youtube.com --client kid-tablet
+adguardctl clients list
+adguardctl filters list
+adguardctl rewrites list
+adguardctl dns-config
+adguardctl tls status              # private key is redacted
+adguardctl sync health             # exit 1 if Sync is not healthy (cron-friendly)
+adguardctl status --json           # raw JSON for piping
+adguardctl status --instance secondary
+```
+
+Run `adguardctl help` for the full command and flag list. `--instance <name>` targets a non-default AdGuard Home box; `--json` emits raw JSON instead of the concise human-readable summary. Exit codes: `0` success, `1` runtime error (backend unreachable / call failed, and `sync health` when not healthy), `2` usage error (unknown command/flag or bad value).
+
+### Starting the MCP server
+
+`adguardctl mcp` (or the back-compat `adguard-mcp` bin) starts the stdio MCP server. If a launcher referenced the file path `dist/mcp-server.js` directly, it keeps working; new launchers can point at `dist/mcp-bin.js` (or `dist/cli.js mcp`). Launchers that use the `adguard-mcp` bin name need no change.
+
 ## Setup per client
 
 ### Claude Desktop

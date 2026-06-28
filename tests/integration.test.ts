@@ -12,13 +12,13 @@ describe("integration", () => {
   // Pulls from the same canonical registration array used by both the MCP stdio
   // entry (mcp-server.ts) and the OpenClaw plugin entry (index.ts). If a new tool
   // is added to src/tools/index.ts but not to buildAllTools, this test breaks.
-  it("buildAllTools registers all 33 production tools with unique names", () => {
+  it("buildAllTools registers all 50 production tools with unique names", () => {
     const dummy = () => new AdGuardClient({ url: "http://x", username: "u", password: "p" });
     const syncDummy = () => new AdGuardSyncClient({ url: "http://sync" });
     const created = buildAllTools(dummy, syncDummy);
-    expect(created).toHaveLength(33);
+    expect(created).toHaveLength(50);
     const names = created.map((t) => t.name);
-    expect(new Set(names).size).toBe(33);
+    expect(new Set(names).size).toBe(50);
     for (const n of names) expect(n).toMatch(/^adguard_/);
   });
 

@@ -15,7 +15,8 @@
     }
   },
   "bin": {
-    "adguard-mcp": "./dist/mcp-server.js"
+    "adguardctl": "./dist/cli.js",
+    "adguard-mcp": "./dist/mcp-bin.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
