@@ -147,7 +147,7 @@ If neither Sync URL env var is set, Sync tools remain listed but return a clear 
 
 ## CLI
 
-The same package ships a read-only operator CLI, `adguardctl`, for shells, cron, and CI. It shares the `AdGuardClient` / `AdGuardSyncClient` core with the MCP server and reads the same env config. It exposes only the Tier-1 read tools; writes stay in the MCP/plugin surface behind the tier gates.
+The same package ships a read-only **control CLI**, `adguardctl`, for shells, cron, and CI. It shares the `AdGuardClient` / `AdGuardSyncClient` core with the MCP server and reads the same env config. It exposes only the Tier-1 read tools; writes stay in the MCP/plugin surface behind the tier gates.
 
 ```bash
 npx @solomonneas/adguard-mcp@latest status
