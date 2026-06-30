@@ -25,8 +25,8 @@ adguard-mcp is an MCP server that exposes AdGuard Home and AdGuardHome Sync cont
 ## Local dev
 
 ```bash
-git clone https://github.com/lidless-labs/adguardctl.git
-cd adguardctl
+git clone https://github.com/lidless-labs/adguardctrl.git
+cd adguardctrl
 npm install
 npm test
 ```

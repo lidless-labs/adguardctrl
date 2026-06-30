@@ -15,6 +15,7 @@
     }
   },
   "bin": {
+    "adguardctrl": "./dist/cli.js",
     "adguardctl": "./dist/cli.js",
     "adguard-mcp": "./dist/mcp-bin.js"
   },
@@ -51,10 +52,10 @@
   "keywords": [
     "adguard",
     "adguard-home",
-    "adguardctl",
+    "adguardctrl",
     "dns",
     "mcp",
     "model-context-protocol"
   ],
-  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguardctl" }
+  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguardctrl" }
 }

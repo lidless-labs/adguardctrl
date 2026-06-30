@@ -60,10 +60,10 @@ export type Parsed =
   | { kind: "sync-health"; json: boolean }
   | { kind: "sync-logs"; json: boolean };
 
-export const HELP = `adguardctl - read-only operator CLI for AdGuard Home and AdGuardHome Sync
+export const HELP = `adguardctrl - read-only operator CLI for AdGuard Home and AdGuardHome Sync
 
 Usage:
-  adguardctl <command> [subcommand] [options]
+  adguardctrl <command> [subcommand] [options]
 
 AdGuard Home (read-only):
   status                       Server status (version, protection, running)
