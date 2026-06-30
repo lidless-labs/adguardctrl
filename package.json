@@ -56,5 +56,5 @@
     "mcp",
     "model-context-protocol"
   ],
-  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguard-mcp" }
+  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguardctl" }
 }
