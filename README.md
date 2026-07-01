@@ -14,9 +14,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/npm/v/@solomonneas/adguard-mcp?style=for-the-badge&logo=npm&label=npm" alt="npm version">
-  <img src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge" alt="MCP server">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT license">
+  <img src="https://shieldcn.dev/npm/@solomonneas/adguard-mcp.svg" alt="npm version">
+  <img src="https://shieldcn.dev/badge/MCP-server-8A2BE2.svg" alt="MCP server">
+  <img src="https://shieldcn.dev/badge/license-MIT-green.svg" alt="MIT license">
 </p>
 
 `adguardctrl` is an operator control CLI for AdGuard Home, the self-hosted DNS sinkhole. It gives shell, cron, CI, and assistant workflows one typed control surface for inspecting network-wide DNS filtering across one or more boxes. The npm package remains `@solomonneas/adguard-mcp` for compatibility and still ships the back-compatible `adguard-mcp` bin; new MCP launchers can start the adapter with `adguardctrl mcp`.
