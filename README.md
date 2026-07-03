@@ -1,6 +1,6 @@
 <!-- content-guard: allow private-ipv4 file -->
 <p align="center">
-  <img src="docs/assets/adguardctrl-banner.jpg" alt="adguardctrl banner" width="900">
+  <img src="docs/assets/adguardctrl-social-preview.jpg" alt="adguardctrl banner" width="900">
 </p>
 
 <h1 align="center">adguardctrl</h1>
@@ -11,11 +11,13 @@
 
 <p align="center">
   <a href="https://lidless.dev/adguard-mcp"><strong>Website</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#quickstart"><strong>Quickstart</strong></a>
 </p>
 
 <p align="center">
+  <img src="https://shieldcn.dev/github/ci/lidless-labs/adguardctrl.svg?branch=main&workflow=ci.yml" alt="CI status">
   <img src="https://shieldcn.dev/npm/@solomonneas/adguard-mcp.svg" alt="npm version">
-  <img src="https://shieldcn.dev/badge/MCP-server-8A2BE2.svg" alt="MCP server">
   <img src="https://shieldcn.dev/badge/license-MIT-green.svg" alt="MIT license">
 </p>
 
