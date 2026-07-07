@@ -1,6 +1,6 @@
 {
   "name": "@solomonneas/adguard-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Operator control CLI for AdGuard Home with an MCP adapter",
   "type": "module",
   "openclaw": {
@@ -17,9 +17,9 @@
     }
   },
   "bin": {
-    "adguardctrl": "./dist/cli.js",
-    "adguardctl": "./dist/cli.js",
-    "adguard-mcp": "./dist/mcp-bin.js"
+    "adguardctrl": "dist/cli.js",
+    "adguardctl": "dist/cli.js",
+    "adguard-mcp": "dist/mcp-bin.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -70,7 +70,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/lidless-labs/adguardctrl"
+    "url": "git+https://github.com/lidless-labs/adguardctrl.git"
   },
   "packageManager": "npm@10.9.7",
   "publishConfig": {

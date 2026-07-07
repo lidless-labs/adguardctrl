@@ -2,11 +2,15 @@
   "schemaVersion": 1,
   "id": "adguard",
   "name": "AdGuard",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AdGuard Home and AdGuardHome Sync tools with three-tier write gating.",
   "entry": "./dist/index.js",
-  "activation": { "onStartup": true },
-  "compat": { "openclaw": ">=2026.4.22" },
+  "activation": {
+    "onStartup": true
+  },
+  "compat": {
+    "openclaw": ">=2026.4.22"
+  },
   "permissions": [],
   "configSchema": {
     "type": "object",
