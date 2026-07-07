@@ -17,16 +17,19 @@ coverage/
 # Managed by `brigade init`. Edit between the markers to customize.
 # Re-running `brigade init` replaces only the content between markers.
 
-# claude: handoffs are session-local and may contain private context.
-.claude/memory-handoffs/*
-!.claude/memory-handoffs/TEMPLATE.md
-!.claude/memory-handoffs/.gitkeep
+# codex: handoffs are session-local and may contain private context.
+.codex/memory-handoffs/*
+!.codex/memory-handoffs/TEMPLATE.md
+!.codex/memory-handoffs/.gitkeep
 
 # Daily session logs are machine-local raw context.
 memory/20[0-9][0-9]-[0-1][0-9]-[0-3][0-9].md
 
 # Review inbox: ambiguous handoffs awaiting human triage.
 memory/handoff-inbox/
+
+# Verified outcome ledger is local scoring evidence.
+memory/outcome/
 
 # brigade local state (logs, scrub cache, dogfood runs, work sessions).
 .brigade/
