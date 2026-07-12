@@ -4,7 +4,9 @@
   "description": "Operator control CLI for AdGuard Home with an MCP adapter",
   "type": "module",
   "openclaw": {
-    "extensions": ["./index.ts"],
+    "extensions": [
+      "./index.ts"
+    ],
     "compat": {
       "pluginApi": ">=2026.3.24-beta.2",
       "minGatewayVersion": "2026.3.24-beta.2"
@@ -28,8 +30,14 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
-  "files": ["dist", "openclaw.plugin.json", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
+    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@sinclair/typebox": "^0.34.0"
   },
@@ -37,7 +45,9 @@
     "openclaw": "^2026.4.22"
   },
   "peerDependenciesMeta": {
-    "openclaw": { "optional": true }
+    "openclaw": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
@@ -47,7 +57,9 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.5"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
   "keywords": [
     "adguard",
@@ -57,5 +69,8 @@
     "mcp",
     "model-context-protocol"
   ],
-  "repository": { "type": "git", "url": "https://github.com/lidless-labs/adguardctrl" }
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lidless-labs/adguardctrl"
+  }
 }
