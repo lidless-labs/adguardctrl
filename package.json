@@ -37,7 +37,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit",
+    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#1f793acd1005fcc2f04f0658befb1399b1841706",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@sinclair/typebox": "^0.34.0"
   },
