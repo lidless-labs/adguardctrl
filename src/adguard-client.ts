@@ -8,6 +8,7 @@ import {
   type HttpMethod,
   type OperatorError,
 } from "@lidless-labs/effect-operator-kit";
+import { redact } from "./security.ts";
 import { registerSecret } from "./security.ts";
 
 export interface AdGuardClientOptions {
@@ -68,30 +69,41 @@ export class AdGuardClient {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const reqPath = pathForConcat(path);
+    const httpEffect = (() => {
+      try {
+        return sendRequest<string>(
+          {
+            baseUrl: this.baseUrl,
+            auth: this.auth,
+            timeoutMs: 2_147_483_647,
+            fetch: fetchWithPlainHeaders,
+            redact: identityRedact,
+          },
+          {
+            method: method as HttpMethod,
+            path: reqPath,
+            body,
+            responseType: "text",
+            expectedStatuses: successStatuses,
+            statusMapper: ({ status, method, path, bodyText, expectedStatuses }) =>
+              new UnexpectedStatusError({ status, method, path, body: bodyText, expected: expectedStatuses }),
+          },
+        );
+      } catch (error) {
+        throw new AdGuardUnreachableError(errorMessage(error));
+      }
+    })();
     const effect = withRetry(
-      sendRequest<string>(
-      {
-        baseUrl: this.baseUrl,
-        auth: this.auth,
-        timeoutMs: 2_147_483_647,
-        fetch: fetchWithPlainHeaders,
-      },
-      {
-        method: method as HttpMethod,
-        path: reqPath,
-        body,
-        responseType: "text",
-        expectedStatuses: successStatuses,
-        statusMapper: ({ status, method, path, bodyText, expectedStatuses }) =>
-          new UnexpectedStatusError({ status, method, path, body: bodyText, expected: expectedStatuses }),
-      },
-      ),
+      httpEffect,
       exponentialRetry({
         maxAttempts: 2,
         initialDelayMs: this.retryDelayMs,
         maxDelayMs: this.retryDelayMs,
         jitter: false,
-        shouldRetry: (error) => error._tag === "TransportError" || (error._tag === "UnexpectedStatusError" && error.status >= 500),
+        shouldRetry: (error) =>
+          error._tag === "TransportError" ||
+          error._tag === "TimeoutError" ||
+          (error._tag === "UnexpectedStatusError" && error.status >= 500),
       }),
     ).pipe(
       Effect.map((res) => parseSuccessBody<T>(res.bodyText)),
@@ -113,9 +125,9 @@ function toAdGuardError(error: OperatorError): AdGuardClientError | AdGuardUnrea
     return new AdGuardClientError(error.status, extractErrorMessage(error.body));
   }
   if (error._tag === "TransportError") {
-    return new AdGuardUnreachableError(error.cause instanceof Error ? error.cause.message : String(error.cause));
+    return new AdGuardUnreachableError(errorMessage(error.cause));
   }
-  if (error._tag === "TimeoutError") return new AdGuardUnreachableError(`TimeoutError: ${error.method} ${error.path} after ${error.timeoutMs}ms`);
+  if (error._tag === "TimeoutError") return new AdGuardUnreachableError("The operation was aborted.");
   if (error._tag === "ParseError") return new AdGuardUnreachableError(error.message);
   return new AdGuardUnreachableError(String(error));
 }
@@ -123,7 +135,15 @@ function toAdGuardError(error: OperatorError): AdGuardClientError | AdGuardUnrea
 function extractErrorMessage(text: string): string {
   let msg = text;
   try { msg = (JSON.parse(text) as { message?: string }).message ?? text; } catch {}
-  return msg;
+  return redact(msg) as string;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function identityRedact(value: string): string {
+  return value;
 }
 
 function baseUrlForConcat(raw: string): URL {

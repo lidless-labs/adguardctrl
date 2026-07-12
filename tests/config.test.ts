@@ -71,6 +71,34 @@ describe("resolveInstances", () => {
     expect(() => resolveInstances(env)).toThrow(PartialInstanceConfigError);
   });
 
+  it("preserves whitespace-only instance fields as configured values", () => {
+    const cfg = resolveInstances({
+      ADGUARD_PRIMARY_URL: "http://x",
+      ADGUARD_PRIMARY_USERNAME: "u",
+      ADGUARD_PRIMARY_PASSWORD: " ",
+    });
+
+    expect(cfg.instances.primary.password).toBe(" ");
+  });
+
+  it("throws a plain Error with repo text when a required instance field is empty", () => {
+    let thrown: unknown;
+    try {
+      resolveInstances({
+        ADGUARD_PRIMARY_URL: "http://x",
+        ADGUARD_PRIMARY_USERNAME: "u",
+        ADGUARD_PRIMARY_PASSWORD: "",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(PartialInstanceConfigError);
+    expect((thrown as Error).message).toBe(
+      "Partial AdGuard instance config for 'primary': missing PASSWORD. Set ADGUARD_PRIMARY_URL, ADGUARD_PRIMARY_USERNAME, and ADGUARD_PRIMARY_PASSWORD together, or unset all three.",
+    );
+  });
+
   it("throws UnknownDefaultInstanceError when ADGUARD_DEFAULT_INSTANCE is not a configured instance", () => {
     const env = {
       ADGUARD_PRIMARY_URL: "http://x",

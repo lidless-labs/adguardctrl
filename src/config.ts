@@ -1,10 +1,4 @@
-import { Effect } from "effect";
-import {
-  ConfigError,
-  fromProcessEnv,
-  requiredString,
-  type EnvReader,
-} from "@lidless-labs/effect-operator-kit";
+import { fromProcessEnv, type EnvReader } from "@lidless-labs/effect-operator-kit";
 
 export interface InstanceConfig {
   url: string;
@@ -73,15 +67,6 @@ export class PartialSyncConfigError extends Error {
   }
 }
 
-/** Bridge kit Effect config primitives to this repo's sync throw-on-error contract. */
-function runConfigEffect<A, E extends ConfigError>(effect: Effect.Effect<A, E>): A {
-  const result = Effect.runSync(Effect.either(effect));
-  if (result._tag === "Left") {
-    throw new Error(result.left.message);
-  }
-  return result.right;
-}
-
 /**
  * Kit optionalString trims and treats whitespace-only as blank. Repo config only
  * treats undefined and exact "" as absent and preserves raw spacing in values.
@@ -115,17 +100,14 @@ function readDefaultInstance(env: EnvReader): string | undefined {
 }
 
 /**
- * Kit requiredString uses generic `${key} is required` and trims. Instance
- * fields are validated via PartialInstanceConfigError with repo-specific copy;
- * when all three are present we delegate the final read through requiredString
- * but return the raw untrimmed value.
+ * Instance fields are validated via PartialInstanceConfigError with repo-specific
+ * copy. Only undefined and exact "" are missing; return the raw untrimmed value.
  */
 function readRequiredInstanceField(env: EnvReader, key: string): string {
   const raw = env.get(key);
-  if (!raw) {
-    return raw!;
+  if (raw === undefined || raw === "") {
+    throw new Error(`${key} is required`);
   }
-  runConfigEffect(requiredString(env, key));
   return raw;
 }
 

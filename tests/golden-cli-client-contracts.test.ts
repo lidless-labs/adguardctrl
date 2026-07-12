@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { run, type CliDeps } from "../cli.ts";
 import { AdGuardClient, AdGuardClientError, AdGuardUnreachableError } from "../src/adguard-client.ts";
-import { AdGuardSyncClient } from "../src/adguard-sync-client.ts";
+import { AdGuardSyncClient, AdGuardSyncClientError, AdGuardSyncUnreachableError } from "../src/adguard-sync-client.ts";
 import { getInstanceConfig, resolveInstances } from "../src/config.ts";
 
 function deps(overrides: Partial<CliDeps> = {}) {
@@ -146,6 +146,20 @@ describe("golden retry contracts", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("retries AdGuard Home aborts during request exactly once as transport failures", async () => {
+    const abort = new DOMException("The operation was aborted.", "AbortError");
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(abort)
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardClient({ url: "https://adguard.example.test", username: "u", password: "p" }, { retryDelayMs: 0 });
+
+    await expect(client.get("/control/status")).resolves.toEqual({ ok: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("retries AdGuard Home 5xx responses exactly once", async () => {
     const fetchMock = vi
       .fn()
@@ -170,6 +184,24 @@ describe("golden retry contracts", () => {
       message: "AdGuard 401: unauthorized",
     } satisfies Partial<AdGuardClientError>);
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("parses long AdGuard Home JSON 4xx error bodies before redaction or truncation", async () => {
+    const longMessage = `unauthorized ${"x".repeat(650)}`;
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { message: longMessage }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardClient({ url: "https://adguard.example.test", username: "u", password: "p" }, { retryDelayMs: 0 });
+
+    let thrown: unknown;
+    try {
+      await client.get("/control/status");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AdGuardClientError);
+    expect((thrown as Error).message).toBe(`AdGuard 401: ${longMessage}`);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -206,6 +238,38 @@ describe("golden retry contracts", () => {
     expect(clientErrorFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("retries AdGuardHome Sync aborts during request exactly once as transport failures", async () => {
+    const abort = new DOMException("The operation was aborted.", "AbortError");
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(abort)
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardSyncClient({ url: "https://sync.example.test" }, { retryDelayMs: 0 });
+
+    await expect(client.get("/api/v1/status")).resolves.toEqual({ ok: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses long AdGuardHome Sync JSON 4xx error bodies before redaction or truncation", async () => {
+    const longMessage = `forbidden ${"x".repeat(650)}`;
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(403, { message: longMessage }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardSyncClient({ url: "https://sync.example.test" }, { retryDelayMs: 0 });
+
+    let thrown: unknown;
+    try {
+      await client.get("/api/v1/status");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AdGuardSyncClientError);
+    expect((thrown as Error).message).toBe(`AdGuardHome Sync 403: ${longMessage}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("throws the last AdGuard Home 5xx retry failure as unreachable", async () => {
     const fetchMock = vi
       .fn()
@@ -219,5 +283,39 @@ describe("golden retry contracts", () => {
       message: "AdGuard unreachable: HTTP 502",
     } satisfies Partial<AdGuardUnreachableError>);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps malformed AdGuard Home paths into the repo error taxonomy", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardClient({ url: "https://adguard.example.test", username: "u", password: "p" }, { retryDelayMs: 0 });
+
+    let thrown: unknown;
+    try {
+      await client.get("/control\\status");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AdGuardUnreachableError);
+    expect((thrown as Error).message).toBe("AdGuard unreachable: buildUrl: path must not contain backslash");
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("maps malformed AdGuardHome Sync paths into the repo error taxonomy", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new AdGuardSyncClient({ url: "https://sync.example.test" }, { retryDelayMs: 0 });
+
+    let thrown: unknown;
+    try {
+      await client.get("/api\\v1/status");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(AdGuardSyncUnreachableError);
+    expect((thrown as Error).message).toBe("AdGuardHome Sync unreachable: buildUrl: path must not contain backslash");
+    expect(fetchMock).toHaveBeenCalledTimes(0);
   });
 });
