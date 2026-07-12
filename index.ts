@@ -5,6 +5,7 @@
 // The runtime registration is duck-typed and works fine; we cast through
 // `unknown` to bridge the intentional structural mismatch.
 import { Buffer } from "node:buffer";
+import { fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { definePluginEntry, type AnyAgentTool } from "openclaw/plugin-sdk/plugin-entry";
 import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, type ResolvedConfig, type SyncConfig } from "./src/config.ts";
 import { AdGuardClient } from "./src/adguard-client.ts";
@@ -18,6 +19,15 @@ interface ToolLike {
   [key: string]: unknown;
 }
 
+/** Kit fail() shape with compact JSON (not kit's 2-space pretty-print) and repo redact. */
+function mcpToolError(message: string) {
+  const failed = fail(message);
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }],
+    isError: failed.isError,
+  };
+}
+
 export function withRedactedErrors<T extends ToolLike>(tool: T): T {
   const orig = tool.execute.bind(tool);
   return {
@@ -26,8 +36,7 @@ export function withRedactedErrors<T extends ToolLike>(tool: T): T {
       try {
         return await orig(id, args);
       } catch (e) {
-        const msg = redact((e as Error).message) as string;
-        return { content: [{ type: "text", text: JSON.stringify({ error: msg }) }], isError: true };
+        return mcpToolError(redact(operatorErrorMessage(e)) as string);
       }
     },
   };

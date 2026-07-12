@@ -1,5 +1,6 @@
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { AdGuardClient } from "./src/adguard-client.ts";
 import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import {
@@ -486,7 +487,7 @@ export async function run(argv: string[], deps: CliDeps): Promise<number> {
   try {
     return await dispatch(parsed, deps);
   } catch (error) {
-    deps.err(error instanceof Error ? error.message : String(error));
+    deps.err(operatorErrorMessage(error));
     return 1;
   }
 }
@@ -656,7 +657,7 @@ if (isEntrypoint) {
       process.exitCode = code;
     })
     .catch((error: unknown) => {
-      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      process.stderr.write(`${operatorErrorMessage(error)}\n`);
       process.exitCode = 1;
     });
 }
