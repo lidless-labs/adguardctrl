@@ -1,3 +1,16 @@
+import { Effect } from "effect";
+import {
+  exponentialRetry,
+  sendRequest,
+  UnexpectedStatusError,
+  withRetry,
+  type AuthStrategy,
+  type HttpMethod,
+  type OperatorError,
+} from "@lidless-labs/effect-operator-kit";
+import { redact } from "./security.ts";
+import { registerSecret } from "./security.ts";
+
 export interface AdGuardClientOptions {
   retryDelayMs?: number;
 }
@@ -25,10 +38,21 @@ export interface ClientInstanceConfig {
 export class AdGuardClient {
   private authHeader: string;
   private retryDelayMs: number;
+  private baseUrl: URL;
+  private auth: AuthStrategy;
 
   constructor(private cfg: ClientInstanceConfig, opts: AdGuardClientOptions = {}) {
     this.authHeader = "Basic " + Buffer.from(`${cfg.username}:${cfg.password}`).toString("base64");
+    registerSecret(cfg.password);
+    registerSecret(this.authHeader);
     this.retryDelayMs = opts.retryDelayMs ?? 1000;
+    this.baseUrl = baseUrlForConcat(cfg.url);
+    this.auth = {
+      apply: (headers) => {
+        headers.set("authorization", this.authHeader);
+        return Effect.succeed(headers);
+      },
+    };
   }
 
   async get<T = unknown>(path: string): Promise<T> {
@@ -44,38 +68,95 @@ export class AdGuardClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const url = this.cfg.url.replace(/\/+$/, "") + path;
-    const headers: Record<string, string> = { authorization: this.authHeader };
-    let bodyStr: string | undefined;
-    if (body !== undefined) {
-      headers["content-type"] = "application/json";
-      bodyStr = JSON.stringify(body);
-    }
-    let lastErr: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const reqPath = pathForConcat(path);
+    const httpEffect = (() => {
       try {
-        const res = await fetch(url, { method, headers, body: bodyStr });
-        if (res.status >= 200 && res.status < 300) {
-          const text = await res.text();
-          return parseSuccessBody<T>(text);
-        }
-        if (res.status >= 500) {
-          lastErr = new AdGuardUnreachableError(`HTTP ${res.status}`);
-          if (attempt === 0) await sleep(this.retryDelayMs);
-          continue;
-        }
-        const errText = await res.text();
-        let msg = errText;
-        try { msg = (JSON.parse(errText) as { message?: string }).message ?? errText; } catch {}
-        throw new AdGuardClientError(res.status, msg);
-      } catch (e) {
-        if (e instanceof AdGuardClientError) throw e;
-        lastErr = new AdGuardUnreachableError((e as Error).message);
-        if (attempt === 0) await sleep(this.retryDelayMs);
+        return sendRequest<string>(
+          {
+            baseUrl: this.baseUrl,
+            auth: this.auth,
+            timeoutMs: 2_147_483_647,
+            fetch: fetchWithPlainHeaders,
+            redact: identityRedact,
+          },
+          {
+            method: method as HttpMethod,
+            path: reqPath,
+            body,
+            responseType: "text",
+            expectedStatuses: successStatuses,
+            statusMapper: ({ status, method, path, bodyText, expectedStatuses }) =>
+              new UnexpectedStatusError({ status, method, path, body: bodyText, expected: expectedStatuses }),
+          },
+        );
+      } catch (error) {
+        throw new AdGuardUnreachableError(errorMessage(error));
       }
-    }
-    throw lastErr ?? new AdGuardUnreachableError("unknown");
+    })();
+    const effect = withRetry(
+      httpEffect,
+      exponentialRetry({
+        maxAttempts: 2,
+        initialDelayMs: this.retryDelayMs,
+        maxDelayMs: this.retryDelayMs,
+        jitter: false,
+        shouldRetry: (error) =>
+          error._tag === "TransportError" ||
+          error._tag === "TimeoutError" ||
+          (error._tag === "UnexpectedStatusError" && error.status >= 500),
+      }),
+    ).pipe(
+      Effect.map((res) => parseSuccessBody<T>(res.bodyText)),
+      Effect.mapError((error) => toAdGuardError(error)),
+    );
+
+    return Effect.runPromise(Effect.either(effect)).then((result) => {
+      if (result._tag === "Right") return result.right;
+      throw result.left;
+    });
   }
+}
+
+const successStatuses = Array.from({ length: 100 }, (_, i) => 200 + i);
+
+function toAdGuardError(error: OperatorError): AdGuardClientError | AdGuardUnreachableError {
+  if (error._tag === "UnexpectedStatusError") {
+    if (error.status >= 500) return new AdGuardUnreachableError(`HTTP ${error.status}`);
+    return new AdGuardClientError(error.status, extractErrorMessage(error.body));
+  }
+  if (error._tag === "TransportError") {
+    return new AdGuardUnreachableError(errorMessage(error.cause));
+  }
+  if (error._tag === "TimeoutError") return new AdGuardUnreachableError("The operation was aborted.");
+  if (error._tag === "ParseError") return new AdGuardUnreachableError(error.message);
+  return new AdGuardUnreachableError(String(error));
+}
+
+function extractErrorMessage(text: string): string {
+  let msg = text;
+  try { msg = (JSON.parse(text) as { message?: string }).message ?? text; } catch {}
+  return redact(msg) as string;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function identityRedact(value: string): string {
+  return value;
+}
+
+function baseUrlForConcat(raw: string): URL {
+  return new URL(raw.replace(/\/+$/, "") + "/");
+}
+
+function pathForConcat(path: string): string {
+  return path.replace(/^\/+/, "");
+}
+
+function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> {
+  const headers = init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init?.headers;
+  return fetch(input.toString(), { ...init, headers });
 }
 
 function parseSuccessBody<T>(text: string): T {
@@ -85,8 +166,4 @@ function parseSuccessBody<T>(text: string): T {
   } catch {
     return text as T;
   }
-}
-
-function sleep(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms));
 }

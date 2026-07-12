@@ -1,6 +1,7 @@
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { Buffer } from "node:buffer";
+import { fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -9,6 +10,15 @@ import { AdGuardClient } from "./src/adguard-client.ts";
 import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import { registerSecret, redact } from "./src/security.ts";
 import { buildAllTools } from "./src/tools/index.ts";
+
+/** Kit fail() shape with compact JSON (not kit's 2-space pretty-print) and repo redact. */
+function mcpToolError(message: string) {
+  const failed = fail(message);
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }],
+    isError: failed.isError,
+  };
+}
 
 /**
  * Build the stdio MCP server and connect it. Extracted from the former
@@ -48,13 +58,12 @@ export async function startServer(): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const t = toolMap.get(req.params.name);
     if (!t) {
-      return { content: [{ type: "text", text: JSON.stringify({ error: `unknown tool: ${req.params.name}` }) }], isError: true };
+      return mcpToolError(`unknown tool: ${req.params.name}`);
     }
     try {
       return await t.execute(req.params.name, (req.params.arguments ?? {}) as Record<string, unknown>);
     } catch (e) {
-      const msg = redact((e as Error).message) as string;
-      return { content: [{ type: "text", text: JSON.stringify({ error: msg }) }], isError: true };
+      return mcpToolError(redact(operatorErrorMessage(e)) as string);
     }
   });
 
@@ -91,8 +100,7 @@ const isEntrypoint = (() => {
 
 if (isEntrypoint) {
   startServer().catch((error: unknown) => {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(`adguard-mcp fatal: ${msg}`);
+    console.error(`adguard-mcp fatal: ${operatorErrorMessage(error)}`);
     process.exit(1);
   });
 }

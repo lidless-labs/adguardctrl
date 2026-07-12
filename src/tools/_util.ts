@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { ok } from "@lidless-labs/effect-operator-kit";
 import type { AdGuardClient } from "../adguard-client.ts";
 import type { AdGuardSyncClient } from "../adguard-sync-client.ts";
 import type { ResolvedConfig } from "../config.ts";
@@ -11,9 +12,17 @@ export const InstanceArg = Type.Optional(Type.String({
 export type ClientFactory = (instance?: string) => AdGuardClient;
 export type SyncClientFactory = () => AdGuardSyncClient;
 
+/**
+ * Repo-local success helper. Delegates content construction to effect-operator-kit
+ * `ok` while preserving the historical content-only shape (no `details`, no `isError`).
+ *
+ * Semantic wrap: kit `ok(payload)` returns `{ content, details }`. Golden contracts
+ * require content-only JSON with 2-space indent and neither property present.
+ */
 export function jsonToolResult(payload: unknown) {
+  const kitResult = ok(payload);
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+    content: kitResult.content,
   };
 }
 

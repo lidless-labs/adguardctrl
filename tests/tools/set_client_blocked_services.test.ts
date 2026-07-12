@@ -17,7 +17,7 @@ describe("adguard_set_client_blocked_services", () => {
   it("looks up client by name and updates blocked services", async () => {
     fake = await startFakeAdGuard([
       { method: "GET", path: "/control/clients", status: 200,
-        body: { clients: [{ name: "family-laptop", ids: ["192.168.1.55"], blocked_services: [] }] } },
+        body: { clients: [{ name: "family-laptop", ids: ["192.0.2.55"], blocked_services: [] }] } },
       { method: "POST", path: "/control/clients/update", status: 200, body: {} },
     ]);
     const tool = createAdguardSetClientBlockedServicesTool(() => new AdGuardClient({ url: fake!.baseUrl, username: "u", password: "p" }));

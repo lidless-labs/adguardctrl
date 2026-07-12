@@ -1,3 +1,5 @@
+import { fromProcessEnv, type EnvReader } from "@lidless-labs/effect-operator-kit";
+
 export interface InstanceConfig {
   url: string;
   username: string;
@@ -65,7 +67,52 @@ export class PartialSyncConfigError extends Error {
   }
 }
 
+/**
+ * Kit optionalString trims and treats whitespace-only as blank. Repo config only
+ * treats undefined and exact "" as absent and preserves raw spacing in values.
+ */
+function presentEnvValue(env: EnvReader, key: string): string | undefined {
+  const raw = env.get(key);
+  if (raw === undefined || raw === "") return undefined;
+  return raw;
+}
+
+/**
+ * First alias key with a present (non-undefined, non-exact-"") value wins.
+ * ADGUARDHOME_SYNC_* precedes ADGUARD_SYNC_* to match repo alias order.
+ */
+function firstPresentAlias(env: EnvReader, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = presentEnvValue(env, key);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+/**
+ * Kit optionalString lowercases via trim; default-instance lookup lowercases raw
+ * without trimming so spacing is preserved in the configured name token.
+ */
+function readDefaultInstance(env: EnvReader): string | undefined {
+  const raw = env.get("ADGUARD_DEFAULT_INSTANCE");
+  if (raw === undefined || raw === "") return undefined;
+  return raw.toLowerCase();
+}
+
+/**
+ * Instance fields are validated via PartialInstanceConfigError with repo-specific
+ * copy. Only undefined and exact "" are missing; return the raw untrimmed value.
+ */
+function readRequiredInstanceField(env: EnvReader, key: string): string {
+  const raw = env.get(key);
+  if (raw === undefined || raw === "") {
+    throw new Error(`${key} is required`);
+  }
+  return raw;
+}
+
 export function resolveInstances(env: Record<string, string | undefined>): ResolvedConfig {
+  const reader = fromProcessEnv(env as NodeJS.ProcessEnv);
   const instances: Record<string, InstanceConfig> = {};
   // Collect all candidate instance names by scanning for any of the three suffixes,
   // so a partial config (e.g. URL+USERNAME set, PASSWORD missing) still surfaces.
@@ -80,9 +127,9 @@ export function resolveInstances(env: Record<string, string | undefined>): Resol
   }
   for (const upperName of candidateNames) {
     const name = upperName.toLowerCase();
-    const url = env[`ADGUARD_${upperName}_URL`];
-    const username = env[`ADGUARD_${upperName}_USERNAME`];
-    const password = env[`ADGUARD_${upperName}_PASSWORD`];
+    const url = presentEnvValue(reader, `ADGUARD_${upperName}_URL`);
+    const username = presentEnvValue(reader, `ADGUARD_${upperName}_USERNAME`);
+    const password = presentEnvValue(reader, `ADGUARD_${upperName}_PASSWORD`);
     const missing: string[] = [];
     if (!url) missing.push("URL");
     if (!username) missing.push("USERNAME");
@@ -90,10 +137,14 @@ export function resolveInstances(env: Record<string, string | undefined>): Resol
     if (missing.length > 0) {
       throw new PartialInstanceConfigError(name, missing);
     }
-    instances[name] = { url: url!, username: username!, password: password! };
+    instances[name] = {
+      url: readRequiredInstanceField(reader, `ADGUARD_${upperName}_URL`),
+      username: readRequiredInstanceField(reader, `ADGUARD_${upperName}_USERNAME`),
+      password: readRequiredInstanceField(reader, `ADGUARD_${upperName}_PASSWORD`),
+    };
   }
   if (Object.keys(instances).length === 0) throw new NoInstancesError();
-  const explicitDefault = env.ADGUARD_DEFAULT_INSTANCE?.toLowerCase();
+  const explicitDefault = readDefaultInstance(reader);
   if (explicitDefault) {
     if (!instances[explicitDefault]) {
       throw new UnknownDefaultInstanceError(explicitDefault, Object.keys(instances));
@@ -105,9 +156,10 @@ export function resolveInstances(env: Record<string, string | undefined>): Resol
 }
 
 export function resolveSyncConfig(env: Record<string, string | undefined>): SyncConfig | undefined {
-  const url = env.ADGUARDHOME_SYNC_URL || env.ADGUARD_SYNC_URL;
-  const username = env.ADGUARDHOME_SYNC_USERNAME || env.ADGUARD_SYNC_USERNAME;
-  const password = env.ADGUARDHOME_SYNC_PASSWORD || env.ADGUARD_SYNC_PASSWORD;
+  const reader = fromProcessEnv(env as NodeJS.ProcessEnv);
+  const url = firstPresentAlias(reader, ["ADGUARDHOME_SYNC_URL", "ADGUARD_SYNC_URL"]);
+  const username = firstPresentAlias(reader, ["ADGUARDHOME_SYNC_USERNAME", "ADGUARD_SYNC_USERNAME"]);
+  const password = firstPresentAlias(reader, ["ADGUARDHOME_SYNC_PASSWORD", "ADGUARD_SYNC_PASSWORD"]);
   const missing: string[] = [];
 
   if (!url && (username || password)) missing.push("URL");

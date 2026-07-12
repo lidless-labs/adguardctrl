@@ -11,7 +11,7 @@ afterEach(async () => { if (fake) await fake.close(); fake = null; });
 describe("adguard_update_client", () => {
   it("refuses without confirm: true", async () => {
     const tool = createAdguardUpdateClientTool(() => new AdGuardClient({ url: "http://x", username: "u", password: "p" }));
-    await expect(tool.execute("id", { name: "laptop", data: { name: "laptop", ids: ["192.168.1.5"] } })).rejects.toThrow(WriteGateError);
+    await expect(tool.execute("id", { name: "laptop", data: { name: "laptop", ids: ["192.0.2.5"] } })).rejects.toThrow(WriteGateError);
   });
 
   it("posts to /control/clients/update with NESTED {name, data} body", async () => {
@@ -22,7 +22,7 @@ describe("adguard_update_client", () => {
     const r = await tool.execute("id", {
       confirm: true,
       name: "laptop",
-      data: { name: "laptop-renamed", ids: ["192.168.1.5", "192.168.1.6"], filtering_enabled: false },
+      data: { name: "laptop-renamed", ids: ["192.0.2.5", "192.0.2.6"], filtering_enabled: false },
     });
     const payload = JSON.parse(r.content[0].text);
     expect(payload.updated).toBe(true);
@@ -31,7 +31,7 @@ describe("adguard_update_client", () => {
     expect(req.path).toBe("/control/clients/update");
     expect(JSON.parse(req.body)).toEqual({
       name: "laptop",
-      data: { name: "laptop-renamed", ids: ["192.168.1.5", "192.168.1.6"], filtering_enabled: false },
+      data: { name: "laptop-renamed", ids: ["192.0.2.5", "192.0.2.6"], filtering_enabled: false },
     });
   });
 });

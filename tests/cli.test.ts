@@ -69,12 +69,12 @@ describe("parseArgs", () => {
   });
 
   it("parses querylog with filters", () => {
-    expect(parseArgs(["querylog", "--limit", "5", "--client", "192.168.1.10", "--domain", "ads.example", "--blocked-only"])).toEqual({
+    expect(parseArgs(["querylog", "--limit", "5", "--client", "192.0.2.10", "--domain", "ads.example", "--blocked-only"])).toEqual({
       kind: "querylog",
       json: false,
       instance: undefined,
       limit: 5,
-      client: "192.168.1.10",
+      client: "192.0.2.10",
       domain: "ads.example",
       blockedOnly: true,
     });
@@ -143,11 +143,11 @@ describe("run", () => {
   it("builds the querylog query string from filters", async () => {
     const client = { get: vi.fn().mockResolvedValue({ data: [] }) };
     const { deps } = capture(client);
-    expect(await run(["querylog", "--limit", "3", "--client", "192.168.1.11", "--domain", "ads.example", "--blocked-only"], deps)).toBe(0);
+    expect(await run(["querylog", "--limit", "3", "--client", "192.0.2.11", "--domain", "ads.example", "--blocked-only"], deps)).toBe(0);
     const url = client.get.mock.calls[0][0] as string;
     expect(url).toContain("/control/querylog?");
     expect(url).toContain("limit=3");
-    expect(url).toContain("search=192.168.1.11+ads.example");
+    expect(url).toContain("search=192.0.2.11+ads.example");
     expect(url).toContain("reason=FilteredBlackList");
   });
 
