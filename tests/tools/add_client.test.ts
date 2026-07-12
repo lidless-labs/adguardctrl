@@ -11,7 +11,7 @@ afterEach(async () => { if (fake) await fake.close(); fake = null; });
 describe("adguard_add_client", () => {
   it("refuses without confirm: true", async () => {
     const tool = createAdguardAddClientTool(() => new AdGuardClient({ url: "http://x", username: "u", password: "p" }));
-    await expect(tool.execute("id", { name: "laptop", ids: ["192.168.1.5"] })).rejects.toThrow(WriteGateError);
+    await expect(tool.execute("id", { name: "laptop", ids: ["192.0.2.5"] })).rejects.toThrow(WriteGateError);
   });
 
   it("posts to /control/clients/add with full client body and strips instance + confirm", async () => {
@@ -22,7 +22,7 @@ describe("adguard_add_client", () => {
     const r = await tool.execute("id", {
       confirm: true,
       name: "laptop",
-      ids: ["192.168.1.5", "aa:bb:cc:dd:ee:ff"],
+      ids: ["192.0.2.5", "aa:bb:cc:dd:ee:ff"],
       use_global_settings: false,
       filtering_enabled: true,
       tags: ["device_laptop"],
@@ -34,7 +34,7 @@ describe("adguard_add_client", () => {
     expect(req.path).toBe("/control/clients/add");
     expect(JSON.parse(req.body)).toEqual({
       name: "laptop",
-      ids: ["192.168.1.5", "aa:bb:cc:dd:ee:ff"],
+      ids: ["192.0.2.5", "aa:bb:cc:dd:ee:ff"],
       use_global_settings: false,
       filtering_enabled: true,
       tags: ["device_laptop"],
@@ -48,7 +48,7 @@ describe("adguard_add_client", () => {
     const tool = createAdguardAddClientTool(() => new AdGuardClient({ url: fake!.baseUrl, username: "u", password: "p" }));
     await tool.execute("id", {
       name: "phone",
-      ids: ["192.168.1.42"],
+      ids: ["192.0.2.42"],
       confirm: true,
       destructive: true,
       instance: "primary",
@@ -58,6 +58,6 @@ describe("adguard_add_client", () => {
     expect(body).not.toHaveProperty("confirm");
     expect(body).not.toHaveProperty("destructive");
     expect(body).not.toHaveProperty("instance");
-    expect(body).toEqual({ name: "phone", ids: ["192.168.1.42"] });
+    expect(body).toEqual({ name: "phone", ids: ["192.0.2.42"] });
   });
 });

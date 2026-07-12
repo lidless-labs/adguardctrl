@@ -16,13 +16,13 @@ import {
 describe("resolveInstances", () => {
   it("parses a single primary instance", () => {
     const env = {
-      ADGUARD_PRIMARY_URL: "http://192.168.1.10",
+      ADGUARD_PRIMARY_URL: "http://192.0.2.10",
       ADGUARD_PRIMARY_USERNAME: "admin",
       ADGUARD_PRIMARY_PASSWORD: "secret",
     };
     const cfg = resolveInstances(env);
     expect(cfg.instances.primary).toEqual({
-      url: "http://192.168.1.10",
+      url: "http://192.0.2.10",
       username: "admin",
       password: "secret",
     });
@@ -31,10 +31,10 @@ describe("resolveInstances", () => {
 
   it("parses multiple instances", () => {
     const env = {
-      ADGUARD_PRIMARY_URL: "http://192.168.1.10",
+      ADGUARD_PRIMARY_URL: "http://192.0.2.10",
       ADGUARD_PRIMARY_USERNAME: "u1",
       ADGUARD_PRIMARY_PASSWORD: "p1",
-      ADGUARD_SECONDARY_URL: "http://192.168.1.11",
+      ADGUARD_SECONDARY_URL: "http://192.0.2.11",
       ADGUARD_SECONDARY_USERNAME: "u2",
       ADGUARD_SECONDARY_PASSWORD: "p2",
     };
@@ -123,7 +123,7 @@ describe("resolveSyncConfig", () => {
 
   it("supports ADGUARD_SYNC_* as an alias without treating it as an AdGuard Home instance", () => {
     const env = {
-      ADGUARD_PRIMARY_URL: "http://192.168.1.10",
+      ADGUARD_PRIMARY_URL: "http://192.0.2.10",
       ADGUARD_PRIMARY_USERNAME: "admin",
       ADGUARD_PRIMARY_PASSWORD: "secret",
       ADGUARD_SYNC_URL: "http://sync-host:8080",

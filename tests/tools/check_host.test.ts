@@ -10,16 +10,16 @@ afterEach(async () => { if (fake) await fake.close(); fake = null; });
 describe("adguard_check_host", () => {
   it("issues GET with query params and returns the filter decision", async () => {
     fake = await startFakeAdGuard([
-      { method: "GET", path: "/control/filtering/check_host?name=youtube.com&client=192.168.1.5&qtype=A", status: 200, body: { reason: "FilteredBlackList", rules: [{ filter_list_id: 1, text: "||youtube.com^" }], service_name: "", cname: "", ip_addrs: [] } },
+      { method: "GET", path: "/control/filtering/check_host?name=youtube.com&client=192.0.2.5&qtype=A", status: 200, body: { reason: "FilteredBlackList", rules: [{ filter_list_id: 1, text: "||youtube.com^" }], service_name: "", cname: "", ip_addrs: [] } },
     ]);
     const tool = createAdguardCheckHostTool(() => new AdGuardClient({ url: fake!.baseUrl, username: "u", password: "p" }));
-    const r = await tool.execute("id", { host: "youtube.com", qtype: "A", client: "192.168.1.5" });
+    const r = await tool.execute("id", { host: "youtube.com", qtype: "A", client: "192.0.2.5" });
     const payload = JSON.parse(r.content[0].text);
     expect(payload.reason).toBe("FilteredBlackList");
     const req = fake.requests[0];
     expect(req.path).toMatch(/^\/control\/filtering\/check_host\?/);
     expect(req.path).toContain("name=youtube.com");
-    expect(req.path).toContain("client=192.168.1.5");
+    expect(req.path).toContain("client=192.0.2.5");
     expect(req.path).toContain("qtype=A");
   });
 

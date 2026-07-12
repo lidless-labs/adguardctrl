@@ -17,7 +17,7 @@ const getClient = (f: FakeAdGuard) => () => new AdGuardClient({ url: f.baseUrl, 
 describe("rewrite tools", () => {
   it("lists DNS rewrite rules", async () => {
     fake = await startFakeAdGuard([
-      { method: "GET", path: "/control/rewrite/list", status: 200, body: [{ domain: "router.home.arpa", answer: "192.168.1.1", enabled: true }] },
+      { method: "GET", path: "/control/rewrite/list", status: 200, body: [{ domain: "router.home.arpa", answer: "192.0.2.1", enabled: true }] },
     ]);
     const tool = createAdguardListRewritesTool(getClient(fake));
     const r = await tool.execute("id", {});
@@ -26,19 +26,19 @@ describe("rewrite tools", () => {
 
   it("adds a rewrite with the Tier-2 gate", async () => {
     const denied = createAdguardAddRewriteTool(() => new AdGuardClient({ url: "http://x", username: "u", password: "p" }));
-    await expect(denied.execute("id", { domain: "nas.home.arpa", answer: "192.168.1.20" })).rejects.toThrow(WriteGateError);
+    await expect(denied.execute("id", { domain: "nas.home.arpa", answer: "192.0.2.20" })).rejects.toThrow(WriteGateError);
 
     fake = await startFakeAdGuard([{ method: "POST", path: "/control/rewrite/add", status: 200, body: {} }]);
     const tool = createAdguardAddRewriteTool(getClient(fake));
-    await tool.execute("id", { domain: "nas.home.arpa", answer: "192.168.1.20", enabled: false, confirm: true });
-    expect(JSON.parse(fake.requests[0].body)).toEqual({ domain: "nas.home.arpa", answer: "192.168.1.20", enabled: false });
+    await tool.execute("id", { domain: "nas.home.arpa", answer: "192.0.2.20", enabled: false, confirm: true });
+    expect(JSON.parse(fake.requests[0].body)).toEqual({ domain: "nas.home.arpa", answer: "192.0.2.20", enabled: false });
   });
 
   it("updates a rewrite with nested target/update", async () => {
     fake = await startFakeAdGuard([{ method: "PUT", path: "/control/rewrite/update", status: 200, body: {} }]);
     const tool = createAdguardUpdateRewriteTool(getClient(fake));
-    const target = { domain: "old.home.arpa", answer: "192.168.1.10" };
-    const update = { domain: "new.home.arpa", answer: "192.168.1.11", enabled: true };
+    const target = { domain: "old.home.arpa", answer: "192.0.2.10" };
+    const update = { domain: "new.home.arpa", answer: "192.0.2.11", enabled: true };
     await tool.execute("id", { target, update, confirm: true });
     expect(JSON.parse(fake.requests[0].body)).toEqual({ target, update });
   });
@@ -46,8 +46,8 @@ describe("rewrite tools", () => {
   it("deletes a rewrite", async () => {
     fake = await startFakeAdGuard([{ method: "POST", path: "/control/rewrite/delete", status: 200, body: {} }]);
     const tool = createAdguardDeleteRewriteTool(getClient(fake));
-    await tool.execute("id", { domain: "old.home.arpa", answer: "192.168.1.10", confirm: true });
-    expect(JSON.parse(fake.requests[0].body)).toEqual({ domain: "old.home.arpa", answer: "192.168.1.10" });
+    await tool.execute("id", { domain: "old.home.arpa", answer: "192.0.2.10", confirm: true });
+    expect(JSON.parse(fake.requests[0].body)).toEqual({ domain: "old.home.arpa", answer: "192.0.2.10" });
   });
 
   it("gets and toggles rewrite settings", async () => {

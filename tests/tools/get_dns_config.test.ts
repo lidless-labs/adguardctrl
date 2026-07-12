@@ -9,7 +9,7 @@ afterEach(async () => { if (fake) await fake.close(); fake = null; });
 
 describe("adguard_get_dns_config", () => {
   it("returns DNS config including upstreams + cache settings", async () => {
-    const payload = { upstream_dns: ["1.1.1.1", "8.8.8.8"], bootstrap_dns: ["9.9.9.9"], cache_size: 4194304, blocking_mode: "default", default_local_ptr_upstreams: ["192.168.1.1"] };
+    const payload = { upstream_dns: ["1.1.1.1", "8.8.8.8"], bootstrap_dns: ["9.9.9.9"], cache_size: 4194304, blocking_mode: "default", default_local_ptr_upstreams: ["192.0.2.1"] };
     fake = await startFakeAdGuard([
       { method: "GET", path: "/control/dns_info", status: 200, body: payload },
     ]);

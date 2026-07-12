@@ -11,7 +11,7 @@ describe("adguard_list_clients", () => {
   it("returns the clients payload", async () => {
     fake = await startFakeAdGuard([
       { method: "GET", path: "/control/clients", status: 200,
-        body: { clients: [{ name: "family-laptop", ids: ["192.168.1.55"], blocked_services: ["youtube"] }] } },
+        body: { clients: [{ name: "family-laptop", ids: ["192.0.2.55"], blocked_services: ["youtube"] }] } },
     ]);
     const tool = createAdguardListClientsTool(() => new AdGuardClient({ url: fake!.baseUrl, username: "u", password: "p" }));
     const r = await tool.execute("id", {});

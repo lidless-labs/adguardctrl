@@ -66,7 +66,7 @@ describe("diagnostic tools", () => {
   it("gets DHCP status and interfaces", async () => {
     fake = await startFakeAdGuard([
       { method: "GET", path: "/control/dhcp/status", status: 200, body: { enabled: false, interface_name: "" } },
-      { method: "GET", path: "/control/dhcp/interfaces", status: 200, body: { eth0: { name: "eth0", ipv4_addresses: ["192.168.1.5"] } } },
+      { method: "GET", path: "/control/dhcp/interfaces", status: 200, body: { eth0: { name: "eth0", ipv4_addresses: ["192.0.2.5"] } } },
     ]);
     const status = createAdguardDhcpStatusTool(getClient(fake));
     const interfaces = createAdguardDhcpInterfacesTool(getClient(fake));
