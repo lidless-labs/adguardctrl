@@ -37,9 +37,10 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#1f793acd1005fcc2f04f0658befb1399b1841706",
+    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#be71030",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@sinclair/typebox": "^0.34.0"
+    "@sinclair/typebox": "^0.34.0",
+    "effect": "^3.21.4"
   },
   "peerDependencies": {
     "openclaw": "^2026.4.22"
