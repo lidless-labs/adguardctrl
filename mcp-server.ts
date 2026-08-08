@@ -5,7 +5,7 @@ import { fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, type ResolvedConfig } from "./src/config.ts";
+import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, resolveRequestTimeoutMs, type ResolvedConfig } from "./src/config.ts";
 import { AdGuardClient } from "./src/adguard-client.ts";
 import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import { registerSecret, redact } from "./src/security.ts";
@@ -43,8 +43,9 @@ export async function startServer(): Promise<void> {
     }
   }
 
-  const getClient = (name?: string) => new AdGuardClient(getInstanceConfig(cfg, name));
-  const getSyncClient = () => new AdGuardSyncClient(getSyncConfig(syncCfg));
+  const timeoutMs = resolveRequestTimeoutMs(process.env);
+  const getClient = (name?: string) => new AdGuardClient(getInstanceConfig(cfg, name), { timeoutMs });
+  const getSyncClient = () => new AdGuardSyncClient(getSyncConfig(syncCfg), { timeoutMs });
 
   const tools = buildAllTools(getClient, getSyncClient);
   const toolMap = new Map(tools.map((t) => [t.name, t]));

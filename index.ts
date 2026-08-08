@@ -7,7 +7,7 @@
 import { Buffer } from "node:buffer";
 import { fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { definePluginEntry, type AnyAgentTool } from "openclaw/plugin-sdk/plugin-entry";
-import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, type ResolvedConfig, type SyncConfig } from "./src/config.ts";
+import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, resolveRequestTimeoutMs, type ResolvedConfig, type SyncConfig } from "./src/config.ts";
 import { AdGuardClient } from "./src/adguard-client.ts";
 import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import { registerSecret, redact } from "./src/security.ts";
@@ -42,7 +42,7 @@ export function withRedactedErrors<T extends ToolLike>(tool: T): T {
   };
 }
 
-function makeFactory(cfg: ResolvedConfig) {
+function makeFactory(cfg: ResolvedConfig, timeoutMs: number) {
   for (const inst of Object.values(cfg.instances)) {
     registerSecret(inst.password);
     const basicValue = "Basic " + Buffer.from(`${inst.username}:${inst.password}`).toString("base64");
@@ -50,7 +50,7 @@ function makeFactory(cfg: ResolvedConfig) {
   }
   return (name?: string) => {
     const ic = getInstanceConfig(cfg, name);
-    return new AdGuardClient(ic);
+    return new AdGuardClient(ic, { timeoutMs });
   };
 }
 
@@ -63,9 +63,9 @@ function registerSyncSecrets(syncCfg: SyncConfig | undefined) {
   }
 }
 
-function makeSyncFactory(syncCfg: SyncConfig | undefined) {
+function makeSyncFactory(syncCfg: SyncConfig | undefined, timeoutMs: number) {
   registerSyncSecrets(syncCfg);
-  return () => new AdGuardSyncClient(getSyncConfig(syncCfg));
+  return () => new AdGuardSyncClient(getSyncConfig(syncCfg), { timeoutMs });
 }
 
 export default definePluginEntry({
@@ -76,8 +76,9 @@ export default definePluginEntry({
     if (api.registrationMode !== "full") return;
     const cfg = resolveInstances(process.env);
     const syncCfg = resolveSyncConfig(process.env);
-    const getClient = makeFactory(cfg);
-    const getSyncClient = makeSyncFactory(syncCfg);
+    const timeoutMs = resolveRequestTimeoutMs(process.env);
+    const getClient = makeFactory(cfg, timeoutMs);
+    const getSyncClient = makeSyncFactory(syncCfg, timeoutMs);
     const register = (t: ToolLike) => api.registerTool(withRedactedErrors(t) as unknown as AnyAgentTool);
     for (const t of buildAllTools(getClient, getSyncClient)) register(t as unknown as ToolLike);
   },

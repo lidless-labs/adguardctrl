@@ -133,6 +133,9 @@ ADGUARD_SECONDARY_PASSWORD=<password>
 
 # Optional: which instance is default when a tool omits the `instance` arg:
 ADGUARD_DEFAULT_INSTANCE=primary
+
+# Optional: per-request HTTP timeout in milliseconds (default 30000; minimum 1000):
+ADGUARD_REQUEST_TIMEOUT_MS=30000
 ```
 
 Instance names are derived from the env-var middle segment (case-insensitive). Add `ADGUARD_LIVINGROOM_URL/USERNAME/PASSWORD` and the MCP picks it up on next start.
