@@ -644,22 +644,27 @@ const isEntrypoint = (() => {
 
 if (isEntrypoint) {
   const env = process.env;
-  const timeoutMs = resolveRequestTimeoutMs(env);
-  run(process.argv.slice(2), {
-    out: (s) => process.stdout.write(`${s}\n`),
-    err: (s) => process.stderr.write(`${s}\n`),
-    makeClient: (instance) => new AdGuardClient(getInstanceConfig(resolveInstances(env), instance), { timeoutMs }),
-    makeSyncClient: () => new AdGuardSyncClient(getSyncConfig(resolveSyncConfig(env)), { timeoutMs }),
-    startServer: async () => {
-      const { startServer } = await import("./mcp-server.ts");
-      await startServer();
-    },
-  })
-    .then((code) => {
-      process.exitCode = code;
+  try {
+    const timeoutMs = resolveRequestTimeoutMs(env);
+    run(process.argv.slice(2), {
+      out: (s) => process.stdout.write(`${s}\n`),
+      err: (s) => process.stderr.write(`${s}\n`),
+      makeClient: (instance) => new AdGuardClient(getInstanceConfig(resolveInstances(env), instance), { timeoutMs }),
+      makeSyncClient: () => new AdGuardSyncClient(getSyncConfig(resolveSyncConfig(env)), { timeoutMs }),
+      startServer: async () => {
+        const { startServer } = await import("./mcp-server.ts");
+        await startServer();
+      },
     })
-    .catch((error: unknown) => {
-      process.stderr.write(`${operatorErrorMessage(error)}\n`);
-      process.exitCode = 1;
-    });
+      .then((code) => {
+        process.exitCode = code;
+      })
+      .catch((error: unknown) => {
+        process.stderr.write(`${operatorErrorMessage(error)}\n`);
+        process.exitCode = 1;
+      });
+  } catch (error: unknown) {
+    process.stderr.write(`${operatorErrorMessage(error)}\n`);
+    process.exitCode = 1;
+  }
 }
