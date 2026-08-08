@@ -10,9 +10,11 @@ import {
 } from "@lidless-labs/effect-operator-kit";
 import { redact } from "./security.ts";
 import { registerSecret } from "./security.ts";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "./config.ts";
 
 export interface AdGuardClientOptions {
   retryDelayMs?: number;
+  timeoutMs?: number;
 }
 
 export class AdGuardClientError extends Error {
@@ -38,6 +40,7 @@ export interface ClientInstanceConfig {
 export class AdGuardClient {
   private authHeader: string;
   private retryDelayMs: number;
+  private timeoutMs: number;
   private baseUrl: URL;
   private auth: AuthStrategy;
 
@@ -46,6 +49,7 @@ export class AdGuardClient {
     registerSecret(cfg.password);
     registerSecret(this.authHeader);
     this.retryDelayMs = opts.retryDelayMs ?? 1000;
+    this.timeoutMs = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.baseUrl = baseUrlForConcat(cfg.url);
     this.auth = {
       apply: (headers) => {
@@ -75,7 +79,7 @@ export class AdGuardClient {
           {
             baseUrl: this.baseUrl,
             auth: this.auth,
-            timeoutMs: 2_147_483_647,
+            timeoutMs: this.timeoutMs,
             fetch: fetchWithPlainHeaders,
             redact: identityRedact,
           },

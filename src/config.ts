@@ -1,4 +1,8 @@
-import { fromProcessEnv, type EnvReader } from "@lidless-labs/effect-operator-kit";
+import { Effect } from "effect";
+import { fromProcessEnv, parseTimeoutEnv, type EnvReader } from "@lidless-labs/effect-operator-kit";
+
+export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const MIN_REQUEST_TIMEOUT_MS = 1_000;
 
 export interface InstanceConfig {
   url: string;
@@ -180,4 +184,15 @@ export function getInstanceConfig(cfg: ResolvedConfig, name?: string): InstanceC
 export function getSyncConfig(cfg: SyncConfig | undefined): SyncConfig {
   if (!cfg) throw new NoSyncServerError();
   return cfg;
+}
+
+export function resolveRequestTimeoutMs(env: Record<string, string | undefined>): number {
+  const reader = fromProcessEnv(env as NodeJS.ProcessEnv);
+  return Effect.runSync(
+    parseTimeoutEnv(reader, "ADGUARD_REQUEST_TIMEOUT_MS", {
+      fallbackMs: DEFAULT_REQUEST_TIMEOUT_MS,
+      minMs: MIN_REQUEST_TIMEOUT_MS,
+      unit: "ms",
+    }),
+  );
 }

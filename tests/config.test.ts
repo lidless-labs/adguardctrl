@@ -11,6 +11,8 @@ import {
   getSyncConfig,
   NoSyncServerError,
   PartialSyncConfigError,
+  resolveRequestTimeoutMs,
+  DEFAULT_REQUEST_TIMEOUT_MS,
 } from "../src/config.ts";
 
 describe("resolveInstances", () => {
@@ -159,6 +161,30 @@ describe("resolveSyncConfig", () => {
 
   it("throws when getting an unconfigured Sync server", () => {
     expect(() => getSyncConfig(undefined)).toThrow(NoSyncServerError);
+  });
+});
+
+describe("resolveRequestTimeoutMs", () => {
+  it("defaults to 30s when ADGUARD_REQUEST_TIMEOUT_MS is unset or blank", () => {
+    expect(resolveRequestTimeoutMs({})).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
+    expect(resolveRequestTimeoutMs({ ADGUARD_REQUEST_TIMEOUT_MS: " " })).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
+    expect(resolveRequestTimeoutMs({ ADGUARD_REQUEST_TIMEOUT_MS: "" })).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
+  });
+
+  it("parses a trimmed millisecond override for slow installations", () => {
+    expect(resolveRequestTimeoutMs({ ADGUARD_REQUEST_TIMEOUT_MS: " 120000 " })).toBe(120_000);
+  });
+
+  it("rejects values below the 1s minimum", () => {
+    expect(() => resolveRequestTimeoutMs({ ADGUARD_REQUEST_TIMEOUT_MS: "999" })).toThrow(
+      "ADGUARD_REQUEST_TIMEOUT_MS must be at least 1000ms",
+    );
+  });
+
+  it("rejects non-numeric timeout values", () => {
+    expect(() => resolveRequestTimeoutMs({ ADGUARD_REQUEST_TIMEOUT_MS: "slow" })).toThrow(
+      "ADGUARD_REQUEST_TIMEOUT_MS must be a positive timeout",
+    );
   });
 });
 

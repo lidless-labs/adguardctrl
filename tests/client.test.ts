@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { startFakeAdGuard, FakeAdGuard } from "./fake-adguard.ts";
 import { AdGuardClient, AdGuardClientError, AdGuardUnreachableError } from "../src/adguard-client.ts";
 
 let fake: FakeAdGuard | null = null;
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   if (fake) await fake.close();
   fake = null;
 });
@@ -80,5 +81,34 @@ describe("AdGuardClient", () => {
       expect(msg).not.toContain("super-secret");
       expect(msg).not.toContain("admin:super-secret");
     }
+  });
+
+  it("aborts when fetch never settles and surfaces AdGuardUnreachableError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          const signal = init?.signal;
+          if (!signal) throw new Error("expected AbortSignal");
+          if (signal.aborted) {
+            reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+            return;
+          }
+          signal.addEventListener(
+            "abort",
+            () => reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" })),
+            { once: true },
+          );
+        }),
+      ),
+    );
+    const c = new AdGuardClient(
+      { url: "http://127.0.0.1:9", username: "u", password: "p" },
+      { timeoutMs: 50, retryDelayMs: 5 },
+    );
+    await expect(c.get("/control/status")).rejects.toMatchObject({
+      name: "AdGuardUnreachableError",
+      message: "AdGuard unreachable: The operation was aborted.",
+    });
   });
 });

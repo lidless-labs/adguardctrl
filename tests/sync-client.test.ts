@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { startFakeAdGuard, FakeAdGuard } from "./fake-adguard.ts";
 import { AdGuardSyncClient, AdGuardSyncClientError, AdGuardSyncUnreachableError } from "../src/adguard-sync-client.ts";
 
 let fake: FakeAdGuard | null = null;
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   if (fake) await fake.close();
   fake = null;
 });
@@ -43,5 +44,34 @@ describe("AdGuardSyncClient", () => {
     const c = new AdGuardSyncClient({ url: fake.baseUrl }, { retryDelayMs: 5 });
     await expect(c.get("/api/v1/status")).rejects.toThrow(AdGuardSyncUnreachableError);
     expect(fake.requests).toHaveLength(2);
+  });
+
+  it("aborts when fetch never settles and surfaces AdGuardSyncUnreachableError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          const signal = init?.signal;
+          if (!signal) throw new Error("expected AbortSignal");
+          if (signal.aborted) {
+            reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+            return;
+          }
+          signal.addEventListener(
+            "abort",
+            () => reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" })),
+            { once: true },
+          );
+        }),
+      ),
+    );
+    const c = new AdGuardSyncClient(
+      { url: "http://127.0.0.1:9" },
+      { timeoutMs: 50, retryDelayMs: 5 },
+    );
+    await expect(c.get("/api/v1/status")).rejects.toMatchObject({
+      name: "AdGuardSyncUnreachableError",
+      message: "AdGuardHome Sync unreachable: The operation was aborted.",
+    });
   });
 });

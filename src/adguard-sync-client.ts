@@ -10,9 +10,11 @@ import {
 } from "@lidless-labs/effect-operator-kit";
 import { redact } from "./security.ts";
 import { registerSecret } from "./security.ts";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "./config.ts";
 
 export interface AdGuardSyncClientOptions {
   retryDelayMs?: number;
+  timeoutMs?: number;
 }
 
 export interface SyncClientConfig {
@@ -38,6 +40,7 @@ export class AdGuardSyncUnreachableError extends Error {
 export class AdGuardSyncClient {
   private authHeader: string | undefined;
   private retryDelayMs: number;
+  private timeoutMs: number;
   private baseUrl: URL;
   private auth: AuthStrategy | undefined;
 
@@ -54,6 +57,7 @@ export class AdGuardSyncClient {
       };
     }
     this.retryDelayMs = opts.retryDelayMs ?? 1000;
+    this.timeoutMs = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.baseUrl = baseUrlForConcat(cfg.url);
   }
 
@@ -78,7 +82,7 @@ export class AdGuardSyncClient {
           {
             baseUrl: this.baseUrl,
             auth: this.auth,
-            timeoutMs: 2_147_483_647,
+            timeoutMs: this.timeoutMs,
             fetch: fetchWithPlainHeaders,
             redact: identityRedact,
           },
