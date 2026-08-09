@@ -163,7 +163,41 @@ function pathForConcat(path: string): string {
 
 function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> {
   const headers = init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init?.headers;
-  return fetch(input.toString(), { ...init, headers });
+  // Resolve only after the body is read so the kit's fetchWithTimeout timer
+  // (cleared when this Promise settles) still covers body stalls. Race the body
+  // against init.signal so abort maps to TimeoutError even when a Response is
+  // not wired to that signal.
+  return fetch(input.toString(), { ...init, headers }).then(async (response) => {
+    const bodyText = await raceWithAbort(response.text(), init?.signal);
+    return new Response(bodyText, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  });
+}
+
+function raceWithAbort<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) {
+    return Promise.reject(Object.assign(new Error("The operation was aborted."), { name: "AbortError" }));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      reject(Object.assign(new Error("The operation was aborted."), { name: "AbortError" }));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (cause) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(cause);
+      },
+    );
+  });
 }
 
 function parseSuccessBody<T>(text: string): T {
