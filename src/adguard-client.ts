@@ -169,12 +169,20 @@ async function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: 
   const signal = init?.signal as AbortSignal | undefined;
   const response = await fetch(input.toString(), { ...init, headers });
   const bodyText = await new Promise<string>((resolve, reject) => {
+    const abortError = (): Error =>
+      Object.assign(new Error("The operation was aborted"), { name: "AbortError" });
     if (signal?.aborted) {
-      reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+      // Release the socket instead of leaving an unread body behind.
+      void response.body?.cancel().catch(() => {});
+      reject(abortError());
       return;
     }
     const onAbort = (): void => {
-      reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+      // Rejecting alone leaves response.text() reading in the background, so the
+      // stalled body we timed out on keeps consuming the connection. Cancelling
+      // the stream is what actually frees it.
+      void response.body?.cancel().catch(() => {});
+      reject(abortError());
     };
     signal?.addEventListener("abort", onAbort, { once: true });
     response.text().then(
@@ -182,7 +190,12 @@ async function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: 
       (err: unknown) => { signal?.removeEventListener("abort", onAbort); reject(err as Error); },
     );
   });
-  return new Response(bodyText, { status: response.status, headers: response.headers });
+  // statusText is carried across too; callers surface it in error messages.
+  return new Response(bodyText, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 }
 
 function parseSuccessBody<T>(text: string): T {
