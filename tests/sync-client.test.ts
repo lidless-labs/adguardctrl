@@ -46,6 +46,31 @@ describe("AdGuardSyncClient", () => {
     expect(fake.requests).toHaveLength(2);
   });
 
+  it("aborts when fetch returns headers but body stalls and surfaces AdGuardSyncUnreachableError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        const signal = init?.signal;
+        const stream = new ReadableStream({
+          start() {},
+          cancel() {},
+        });
+        const response = new Response(stream, { status: 200 });
+        if (signal) {
+          signal.addEventListener("abort", () => {}, { once: true });
+        }
+        return Promise.resolve(response);
+      }),
+    );
+    const c = new AdGuardSyncClient(
+      { url: "http://127.0.0.1:9" },
+      { timeoutMs: 50, retryDelayMs: 5 },
+    );
+    await expect(c.get("/api/v1/status")).rejects.toMatchObject({
+      name: "AdGuardSyncUnreachableError",
+    });
+  });
+
   it("aborts when fetch never settles and surfaces AdGuardSyncUnreachableError", async () => {
     vi.stubGlobal(
       "fetch",

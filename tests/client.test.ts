@@ -83,6 +83,37 @@ describe("AdGuardClient", () => {
     }
   });
 
+  it("aborts when fetch returns headers but body stalls and surfaces AdGuardUnreachableError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        const signal = init?.signal;
+        // Resolve headers immediately but never resolve the body
+        const stream = new ReadableStream({
+          start() {
+            // never enqueue / close — body stalls forever
+          },
+          cancel() {
+            // cancelled when signal aborts
+          },
+        });
+        const response = new Response(stream, { status: 200 });
+        // Abort the body read when the signal fires
+        if (signal) {
+          signal.addEventListener("abort", () => {}, { once: true });
+        }
+        return Promise.resolve(response);
+      }),
+    );
+    const c = new AdGuardClient(
+      { url: "http://127.0.0.1:9", username: "u", password: "p" },
+      { timeoutMs: 50, retryDelayMs: 5 },
+    );
+    await expect(c.get("/control/status")).rejects.toMatchObject({
+      name: "AdGuardUnreachableError",
+    });
+  });
+
   it("aborts when fetch never settles and surfaces AdGuardUnreachableError", async () => {
     vi.stubGlobal(
       "fetch",

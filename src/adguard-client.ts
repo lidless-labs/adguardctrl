@@ -158,9 +158,31 @@ function pathForConcat(path: string): string {
   return path.replace(/^\/+/, "");
 }
 
-function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> {
+/**
+ * Wraps fetch so the returned Promise does not resolve until the response body
+ * has been fully read.  The AbortController signal created by fetchWithTimeout
+ * (in effect-operator-kit) therefore remains active during body consumption,
+ * which means a stalled response body is cancelled by the configured timeout.
+ */
+async function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> {
   const headers = init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init?.headers;
-  return fetch(input.toString(), { ...init, headers });
+  const signal = init?.signal as AbortSignal | undefined;
+  const response = await fetch(input.toString(), { ...init, headers });
+  const bodyText = await new Promise<string>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+      return;
+    }
+    const onAbort = (): void => {
+      reject(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    response.text().then(
+      (text) => { signal?.removeEventListener("abort", onAbort); resolve(text); },
+      (err: unknown) => { signal?.removeEventListener("abort", onAbort); reject(err as Error); },
+    );
+  });
+  return new Response(bodyText, { status: response.status, headers: response.headers });
 }
 
 function parseSuccessBody<T>(text: string): T {
