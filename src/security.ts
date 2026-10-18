@@ -53,8 +53,11 @@ export function equalSecret(a: string, b: string): boolean {
 }
 
 /** Keep upstream credential handling here, including Sync and URL userinfo. */
-export function registerHttpToken(token: string | undefined, configs: (InstanceConfig | SyncConfig)[]): asserts token is string {
-  if (!token?.trim()) throw new Error("ADGUARD_MCP_HTTP_TOKEN is required and must not be blank");
+export function registerHttpToken(value: string | undefined, configs: (InstanceConfig | SyncConfig)[]): string {
+  // Header values arrive trimmed, so compare against the trimmed secret.
+  const token = (value ?? "").trim();
+  if (!token) throw new Error("ADGUARD_MCP_HTTP_TOKEN is required and must not be blank");
+  if (token.length < 32) throw new Error("ADGUARD_MCP_HTTP_TOKEN must be at least 32 characters (e.g. openssl rand -hex 32)");
   const credentials: string[] = [];
   for (const cfg of configs) {
     const url = new URL(cfg.url);
@@ -74,4 +77,5 @@ export function registerHttpToken(token: string | undefined, configs: (InstanceC
     throw new Error("ADGUARD_MCP_HTTP_TOKEN must differ from all AdGuard Home and Sync credentials");
   }
   registerSecret(token);
+  return token;
 }

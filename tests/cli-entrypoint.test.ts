@@ -38,7 +38,7 @@ describe("HTTP entrypoints", () => {
       cwd: root,
       env: { ...env, ADGUARD_PRIMARY_URL: "https://adguard.example.com",
         ADGUARD_PRIMARY_USERNAME: "test-admin", ADGUARD_PRIMARY_PASSWORD: "test-password",
-        ADGUARD_MCP_HTTP_TOKEN: "entrypoint-test-token", ADGUARD_MCP_HTTP_PORT: "0" },
+        ADGUARD_MCP_HTTP_TOKEN: "entrypoint-test-token-at-least-32-characters", ADGUARD_MCP_HTTP_PORT: "0" },
       stdio: ["pipe", "pipe", "pipe"],
     });
     const exited = once(child, "exit");

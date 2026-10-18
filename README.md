@@ -286,8 +286,8 @@ HTTP token with `openssl rand -hex 32`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ADGUARD_MCP_HTTP_TOKEN` | Required | Independent bearer credential |
-| `ADGUARD_MCP_HTTP_HOST` | IPv4 loopback | Listener bind address |
+| `ADGUARD_MCP_HTTP_TOKEN` | Required | Independent bearer credential, at least 32 characters |
+| `ADGUARD_MCP_HTTP_HOST` | IPv4 loopback | Listener bind address. Wildcards (`0.0.0.0`, `::`, `[::]`) are refused |
 | `ADGUARD_MCP_HTTP_PORT` | `3111` | TCP port, or `0` for a free port |
 
 Startup rejects a missing or blank token, or a token equal to any configured

@@ -74,14 +74,19 @@ export interface HttpServerHandle {
 export async function createHttpServer(): Promise<HttpServerHandle> {
   // Snapshot configuration once. Sessions cannot change another session's config.
   const env = { ...process.env };
-  const token = env.ADGUARD_MCP_HTTP_TOKEN;
-  if (!token?.trim()) throw new Error("ADGUARD_MCP_HTTP_TOKEN is required and must not be blank");
+  const rawToken = env.ADGUARD_MCP_HTTP_TOKEN;
+  if (!rawToken?.trim()) throw new Error("ADGUARD_MCP_HTTP_TOKEN is required and must not be blank");
   const cfg = resolveInstances(env);
   const syncCfg = resolveSyncConfig(env);
-  registerHttpToken(token, [...Object.values(cfg.instances), ...(syncCfg ? [syncCfg] : [])]);
+  const token = registerHttpToken(rawToken, [...Object.values(cfg.instances), ...(syncCfg ? [syncCfg] : [])]);
   const host = env.ADGUARD_MCP_HTTP_HOST ?? "127.0.0.1";
   if (!host.trim() || host.includes("/") || host.includes("@")) {
     throw new Error("ADGUARD_MCP_HTTP_HOST must be a host name or address");
+  }
+  // validHost only accepts loopback aliases or the exact bound host, so a
+  // wildcard bind would answer 403 to every non-loopback client.
+  if (["0.0.0.0", "::", "[::]"].includes(host.trim())) {
+    throw new Error("ADGUARD_MCP_HTTP_HOST must be a specific address, not a wildcard; bind the interface clients will use");
   }
   const portValue = env.ADGUARD_MCP_HTTP_PORT ?? "3111";
   if (!/^\d+$/.test(portValue) || Number(portValue) > 65535) {
@@ -124,6 +129,8 @@ export async function createHttpServer(): Promise<HttpServerHandle> {
       return send(response, 405, "Method not allowed");
     }
     const body = request.method === "POST" ? await readBody(request) : undefined;
+    // close() snapshots sessions; one created after that would never be disposed.
+    if (closing) return send(response, 503, "Service unavailable");
     const id = request.headers["mcp-session-id"];
     let session = typeof id === "string" ? sessions.get(id) : undefined;
     if (id !== undefined && !session) return send(response, 404, "Session not found");
