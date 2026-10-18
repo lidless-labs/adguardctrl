@@ -30,7 +30,7 @@ const BLOCKED_REASONS = [
 export type Parsed =
   | { kind: "help" }
   | { kind: "version" }
-  | { kind: "mcp" }
+  | { kind: "mcp"; http?: true }
   | { kind: "status"; json: boolean; instance?: string }
   | { kind: "stats"; json: boolean; instance?: string }
   | {
@@ -95,7 +95,7 @@ AdGuardHome Sync (read-only):
 
 Other:
   help                         Show this help
-  mcp                          Start the MCP server over stdio
+  mcp [--http]                  Start the MCP server over stdio or HTTP
 
 Global options:
   --instance <name>            Target a named AdGuard instance (default: configured default)
@@ -154,8 +154,9 @@ export function parseArgs(argv: string[]): Parsed {
   const cmd = args.shift();
   if (!cmd || cmd === "help") return { kind: "help" };
   if (cmd === "mcp") {
+    const http = takeFlag(args, "--http");
     ensureNoExtra(args);
-    return { kind: "mcp" };
+    return http ? { kind: "mcp", http: true } : { kind: "mcp" };
   }
 
   // Pull global options out of the remaining args before dispatching.
@@ -458,7 +459,7 @@ export interface CliDeps {
   err: (s: string) => void;
   makeClient: (instance?: string) => AdGuardClient;
   makeSyncClient: () => AdGuardSyncClient;
-  startServer: () => Promise<void>;
+  startServer: (http?: boolean) => Promise<void>;
 }
 
 export async function run(argv: string[], deps: CliDeps): Promise<number> {
@@ -481,7 +482,8 @@ export async function run(argv: string[], deps: CliDeps): Promise<number> {
     return 0;
   }
   if (parsed.kind === "mcp") {
-    await deps.startServer();
+    if (parsed.http) await deps.startServer(true);
+    else await deps.startServer();
     return 0;
   }
 
@@ -651,7 +653,12 @@ if (isEntrypoint) {
       err: (s) => process.stderr.write(`${s}\n`),
       makeClient: (instance) => new AdGuardClient(getInstanceConfig(resolveInstances(env), instance), { timeoutMs }),
       makeSyncClient: () => new AdGuardSyncClient(getSyncConfig(resolveSyncConfig(env)), { timeoutMs }),
-      startServer: async () => {
+      startServer: async (http = false) => {
+        if (http) {
+          const { startHttpServer } = await import("./src/http.ts");
+          await startHttpServer();
+          return;
+        }
         const { startServer } = await import("./mcp-server.ts");
         await startServer();
       },
