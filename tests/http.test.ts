@@ -11,11 +11,11 @@ const TOKEN = randomUUID();
 const env = {
   ADGUARD_DEFAULT_INSTANCE: "primary",
   ADGUARD_PRIMARY_URL: "https://adguard.example.com",
-  ADGUARD_PRIMARY_USERNAME: "test-admin",
-  ADGUARD_PRIMARY_PASSWORD: "test-upstream-secret",
+  ADGUARD_PRIMARY_USERNAME: "test-admin-username-at-least-32-characters",
+  ADGUARD_PRIMARY_PASSWORD: "test-upstream-secret-at-least-32-characters",
   ADGUARDHOME_SYNC_URL: "https://sync.example.com",
-  ADGUARDHOME_SYNC_USERNAME: "sync-admin",
-  ADGUARDHOME_SYNC_PASSWORD: "test-sync-secret",
+  ADGUARDHOME_SYNC_USERNAME: "sync-admin-username-at-least-32-characters",
+  ADGUARDHOME_SYNC_PASSWORD: "test-sync-secret-at-least-32-characters",
   ADGUARD_MCP_HTTP_TOKEN: TOKEN,
   ADGUARD_MCP_HTTP_PORT: "0",
   ADGUARD_MCP_HTTP_HOST: undefined,
@@ -112,28 +112,45 @@ describe("authenticated Streamable HTTP", () => {
 
   it.each([undefined, "", "   ", env.ADGUARD_PRIMARY_USERNAME, env.ADGUARD_PRIMARY_PASSWORD,
     env.ADGUARDHOME_SYNC_USERNAME, env.ADGUARDHOME_SYNC_PASSWORD,
-    ...["test-admin:test-upstream-secret", "sync-admin:test-sync-secret"].flatMap((pair) => [
+    ...[`${env.ADGUARD_PRIMARY_USERNAME}:${env.ADGUARD_PRIMARY_PASSWORD}`,
+      `${env.ADGUARDHOME_SYNC_USERNAME}:${env.ADGUARDHOME_SYNC_PASSWORD}`].flatMap((pair) => [
       pair, Buffer.from(pair).toString("base64"), `Basic ${Buffer.from(pair).toString("base64")}`,
     ]),
   ])("refuses missing, blank, or reused credentials (%#)", async (token) => {
     configure({ ADGUARD_MCP_HTTP_TOKEN: token });
-    await expect(createHttpServer()).rejects.toThrow(/ADGUARD_MCP_HTTP_TOKEN/);
+    await expect(createHttpServer()).rejects.toThrow(token?.trim() ? /must differ/ : /required and must not be blank/);
   });
 
   it("checks Sync aliases and URL userinfo credentials", async () => {
     configure({ ADGUARDHOME_SYNC_URL: undefined, ADGUARDHOME_SYNC_USERNAME: undefined,
       ADGUARDHOME_SYNC_PASSWORD: undefined, ADGUARD_SYNC_URL: "https://sync.example.com",
-      ADGUARD_SYNC_USERNAME: "alias-admin", ADGUARD_SYNC_PASSWORD: "alias-secret",
-      ADGUARD_MCP_HTTP_TOKEN: "alias-secret" });
-    await expect(createHttpServer()).rejects.toThrow(/ADGUARD_MCP_HTTP_TOKEN/);
-    configure({ ADGUARD_PRIMARY_URL: "https://url-admin:url%2Dsecret@adguard.example.com",
-      ADGUARD_MCP_HTTP_TOKEN: "url-secret" });
-    await expect(createHttpServer()).rejects.toThrow(/ADGUARD_MCP_HTTP_TOKEN/);
+      ADGUARD_SYNC_USERNAME: "alias-admin", ADGUARD_SYNC_PASSWORD: "alias-secret-at-least-32-characters",
+      ADGUARD_MCP_HTTP_TOKEN: "alias-secret-at-least-32-characters" });
+    await expect(createHttpServer()).rejects.toThrow(/must differ/);
+    configure({ ADGUARD_PRIMARY_URL: "https://url-admin:url%2Dsecret-at-least-32-characters@adguard.example.com",
+      ADGUARD_MCP_HTTP_TOKEN: "url-secret-at-least-32-characters" });
+    await expect(createHttpServer()).rejects.toThrow(/must differ/);
   });
 
   it("registers the HTTP token for redaction", async () => {
     await start();
     expect(redact(`Bearer ${TOKEN}`)).toBe("Bearer REDACTED");
+  });
+
+  it("refuses a token shorter than 32 characters", async () => {
+    configure({ ADGUARD_MCP_HTTP_TOKEN: "a".repeat(31) });
+    await expect(createHttpServer()).rejects.toThrow(/at least 32 characters/);
+  });
+
+  it.each(["0.0.0.0", "::", "[::]"])("refuses wildcard bind host %s", async (host) => {
+    configure({ ADGUARD_MCP_HTTP_HOST: host });
+    await expect(createHttpServer()).rejects.toThrow(/not a wildcard/);
+  });
+
+  it("accepts a token with surrounding whitespace from a secrets file", async () => {
+    const url = await start({ ADGUARD_MCP_HTTP_TOKEN: `  ${TOKEN}\n` });
+    const { client } = await connect(url);
+    expect((await client.listTools()).tools).toHaveLength(50);
   });
 
   it.each(["-1", "65536", "abc", "3000suffix", "1.5"])("refuses invalid port %s", async (port) => {
