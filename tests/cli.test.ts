@@ -26,6 +26,12 @@ function capture(
 }
 
 describe("parseArgs", () => {
+  it("starts HTTP only when mcp --http is requested", async () => {
+    const { deps, startServer } = capture();
+    expect(await run(["mcp", "--http"], deps)).toBe(0);
+    expect(startServer).toHaveBeenCalledWith(true);
+  });
+
   it("routes simple instance-bearing reads with defaults", () => {
     expect(parseArgs(["status"])).toEqual({ kind: "status", json: false, instance: undefined });
     expect(parseArgs(["stats", "--json"])).toEqual({ kind: "stats", json: true, instance: undefined });

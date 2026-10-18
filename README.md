@@ -265,11 +265,111 @@ ADGUARD_PRIMARY_PASSWORD = "your-password"
 
 It does not:
 
-- run a daemon, scheduler, or background process
+- install or manage background services automatically
 - store or proxy your DNS traffic
 - make any write without an explicit `confirm: true` flag from the caller
 - perform a destructive operation without `confirm: true` and `destructive: true` together
 - talk to AdGuard's hosted DNS product; it targets self-hosted AdGuard Home instances you run
+
+## HTTP mode
+
+Run one process shared by multiple MCP clients, alongside the existing stdio mode:
+
+```sh
+node dist/mcp-server.js --http
+# Also: adguardctrl mcp --http or adguard-mcp --http
+```
+
+Configure the usual `ADGUARD_<NAME>_URL`, `_USERNAME`, and `_PASSWORD` variables
+and optional AdGuardHome Sync credentials on the server. Generate a separate
+HTTP token with `openssl rand -hex 32`.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ADGUARD_MCP_HTTP_TOKEN` | Required | Independent bearer credential |
+| `ADGUARD_MCP_HTTP_HOST` | IPv4 loopback | Listener bind address |
+| `ADGUARD_MCP_HTTP_PORT` | `3111` | TCP port, or `0` for a free port |
+
+Startup rejects a missing or blank token, or a token equal to any configured
+AdGuard Home or Sync username, password, credential pair, Base64 credential
+pair, Basic authorization value, or URL userinfo credential. Sync aliases are
+resolved using the existing `ADGUARDHOME_SYNC_*` / `ADGUARD_SYNC_*` precedence.
+Token comparisons use SHA-256 digests and constant-time comparison. The token is
+registered with the secret redactor.
+
+The resolved listener address is printed to stderr. `/mcp` accepts Streamable
+HTTP POST, GET, and DELETE with bearer authentication on every request.
+`GET /healthz` requires no token and returns only `{"status":"ok"}`.
+Host and Origin checks run before authentication. Host must match the bound host
+or a loopback alias. A supplied Origin must be an HTTP or HTTPS loopback origin.
+The listener limits bodies to 1 MiB, request receipt to 30 seconds, headers to 10 seconds,
+and sessions to 128. Sessions idle for 30 minutes expire on a minute timer.
+Active POST requests prevent idle expiry. An open SSE channel alone does not.
+SIGTERM and SIGINT close the sessions and listener. Clients must initialize again
+after expiry or restart.
+
+Each session owns a fresh MCP server, tool objects, and request handlers. Write
+gates have no pending approvals or process-wide write-enable flag: every call
+requires `confirm:true`, plus `destructive:true` for destructive tools. A confirmed
+call cannot authorize a later call or another session. There are no deferred tool
+sets, client caches, or shared rate limiters. Only the secret masking registry is
+shared. All clients with the token share the configured upstream privileges and
+can modify the same upstream resources. Session IDs route connections and do not
+identify separate users.
+
+Keep the default loopback binding for local clients. Remote access needs a
+trusted TLS proxy or tunnel and network access controls. This listener provides
+no TLS, OAuth, browser CORS access, or per-client upstream accounts. Preserve the
+allowed Host header through a proxy. A wildcard bind does not allow arbitrary
+Host headers.
+
+### Claude Code
+
+Add an HTTP entry under `mcpServers` in the client configuration:
+
+```json
+{
+  "mcpServers": {
+    "adguard": {
+      "type": "http",
+      "url": "http://localhost:3111/mcp",
+      "headersHelper": "/path/to/helper ADGUARD_MCP_HTTP_TOKEN"
+    }
+  }
+}
+```
+
+The executable helper reads the named environment variable and prints an
+Authorization JSON object. For example:
+
+```js
+#!/usr/bin/env node
+const token = process.env[process.argv[2]];
+if (!token) process.exit(1);
+console.log(JSON.stringify({ Authorization: `Bearer ${token}` }));
+```
+
+Provide `ADGUARD_MCP_HTTP_TOKEN` to the helper through the client environment.
+Keep the token out of client configuration files and version control.
+
+### Codex
+
+```toml
+[mcp_servers.adguard]
+url = "http://localhost:3111/mcp"
+bearer_token_env_var = "ADGUARD_MCP_HTTP_TOKEN"
+```
+
+Export the token in the Codex process environment. The URL selects Streamable
+HTTP, with the bearer token supplied from the named variable.
+
+### systemd user service
+
+[Example unit](docs/systemd/adguard-mcp-http.service) uses an installation under
+`/opt/adguardctrl`. Adjust its paths before installing it. Its EnvironmentFile is
+`%h/.config/adguard-mcp/http.env`. Create that file with mode `0600`, containing
+the server's upstream configuration and HTTP token. The unit uses
+`NoNewPrivileges=true`, `PrivateTmp=true`, and `UMask=0077`.
 
 ## License
 
