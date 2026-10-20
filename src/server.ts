@@ -41,7 +41,7 @@ export function createMcpServer(env: NodeJS.ProcessEnv = process.env): Server {
   const tools = buildAllTools(getClient, getSyncClient);
   const toolMap = new Map(tools.map((t) => [t.name, t]));
 
-  const server = new Server({ name: "adguard-mcp", version: "0.3.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "adguard-mcp", version: "0.3.2" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.parameters })),
