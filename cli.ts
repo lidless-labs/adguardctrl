@@ -12,7 +12,7 @@ import {
 } from "./src/config.ts";
 import { redactTlsSecrets } from "./src/tools/adguard_tls_status.ts";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.2";
 
 export class UsageError extends Error {}
 

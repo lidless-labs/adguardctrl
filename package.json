@@ -1,11 +1,11 @@
 {
   "name": "@solomonneas/adguard-mcp",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Operator control CLI for AdGuard Home with an MCP adapter",
   "type": "module",
   "openclaw": {
     "extensions": [
-      "./index.ts"
+      "./dist/index.js"
     ],
     "compat": {
       "pluginApi": ">=2026.3.24-beta.2",
@@ -17,9 +17,9 @@
     }
   },
   "bin": {
-    "adguardctrl": "./dist/cli.js",
-    "adguardctl": "./dist/cli.js",
-    "adguard-mcp": "./dist/mcp-bin.js"
+    "adguardctrl": "dist/cli.js",
+    "adguardctl": "dist/cli.js",
+    "adguard-mcp": "dist/mcp-bin.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -37,7 +37,6 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#be71030",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@sinclair/typebox": "^0.34.0",
     "effect": "^3.21.4"
@@ -51,6 +50,7 @@
     }
   },
   "devDependencies": {
+    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#be71030",
     "@types/node": "^25.6.2",
     "openclaw": "^2026.4.22",
     "tsup": "^8.4.0",
@@ -72,6 +72,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/lidless-labs/adguardctrl"
+    "url": "git+https://github.com/lidless-labs/adguardctrl.git"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
