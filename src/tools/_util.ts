@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import { ok } from "@lidless-labs/effect-operator-kit";
+import { boundResult } from "@lidless-labs/effect-operator-kit";
 import type { AdGuardClient } from "../adguard-client.ts";
 import type { AdGuardSyncClient } from "../adguard-sync-client.ts";
 import type { ResolvedConfig } from "../config.ts";
@@ -12,18 +12,22 @@ export const InstanceArg = Type.Optional(Type.String({
 export type ClientFactory = (instance?: string) => AdGuardClient;
 export type SyncClientFactory = () => AdGuardSyncClient;
 
+// A type alias, not an interface, so it stays assignable to the MCP SDK's open result type.
+export type JsonToolResult = {
+  content: Array<{ type: "text"; text: string }>;
+  structuredContent?: Record<string, unknown>;
+};
+
 /**
- * Repo-local success helper. Delegates content construction to effect-operator-kit
- * `ok` while preserving the historical content-only shape (no `details`, no `isError`).
- *
- * Semantic wrap: kit `ok(payload)` returns `{ content, details }`. Golden contracts
- * require content-only JSON with 2-space indent and neither property present.
+ * Repo-local success helper. Keeps the historical content-only shape (2-space JSON, no
+ * `details`, no `isError`, no `structuredContent`) and applies the kit's UTF-8 byte cap.
+ * An oversize payload is cut with the kit's `[truncated: ...]` marker and gains the kit's
+ * `structuredContent: { truncated: true, ... }` flag.
  */
-export function jsonToolResult(payload: unknown) {
-  const kitResult = ok(payload);
-  return {
-    content: kitResult.content,
-  };
+export function jsonToolResult(payload: unknown): JsonToolResult {
+  return boundResult<JsonToolResult>({
+    content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) ?? "null" }],
+  });
 }
 
 export function makeClientFactory(cfg: ResolvedConfig, build: (ic: ReturnType<typeof getInstanceConfig>) => AdGuardClient): ClientFactory {

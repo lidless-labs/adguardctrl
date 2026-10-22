@@ -48,6 +48,7 @@ import { createAdguardSyncHealthTool } from "./adguard_sync_health.ts";
 import { createAdguardSyncLogsTool } from "./adguard_sync_logs.ts";
 import { createAdguardSyncRunTool } from "./adguard_sync_run.ts";
 import { createAdguardSyncClearLogsTool } from "./adguard_sync_clear_logs.ts";
+import { withAnnotations } from "./annotations.ts";
 import type { ClientFactory, SyncClientFactory } from "./_util.ts";
 
 export {
@@ -109,7 +110,7 @@ export {
  * register from this single source so the production tool count stays in lockstep.
  */
 export function buildAllTools(getClient: ClientFactory, getSyncClient: SyncClientFactory) {
-  return [
+  return withAnnotations([
     // Tier 1: reads
     createAdguardStatusTool(getClient),
     createAdguardStatsTool(getClient),
@@ -163,5 +164,5 @@ export function buildAllTools(getClient: ClientFactory, getSyncClient: SyncClien
     createAdguardClearQueryLogTool(getClient),
     createAdguardResetStatsTool(getClient),
     createAdguardSyncClearLogsTool(getSyncClient),
-  ];
+  ]);
 }
