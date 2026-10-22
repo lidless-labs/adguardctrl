@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CI workflow (`.github/workflows/ci.yml`) that runs `npm run typecheck`, `npm test`, and `npm run build` on pull requests targeting `master`.
+
 ## [0.3.2] - 2026-10-19
 
 ### Changed
