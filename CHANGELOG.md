@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Bumped `@lidless-labs/effect-operator-kit` to `1505318b2625fc273c51018389e2c61677e073d7`. Tool results are now capped at 90,000 UTF-8 bytes. An oversize result is cut with a `[truncated: output was N bytes, limit is M bytes ...]` marker and carries `structuredContent: { truncated: true, ... }`. Results under the cap keep the existing content-only, 2-space JSON shape.
+- Bumped `@lidless-labs/effect-operator-kit` to `1505318b2625fc273c51018389e2c61677e073d7`. Tool results, including error results, are now capped at 90,000 UTF-8 bytes. An oversize result is cut with a `[truncated: output was N bytes, limit is M bytes ...]` marker and carries `structuredContent: { truncated: true, ... }`. Results under the cap keep the existing content-only, 2-space JSON shape.
 - `tools/list` now carries tool annotations. The 22 Tier-1 reads declare `readOnlyHint: true`; every Tier-2 write and Tier-3 destructive tool declares `destructiveHint: true`, so clients that prompt on destructive tools prompt on all of them. `buildAllTools` throws at startup if a tool has no entry in `src/tools/annotations.ts`.
 
 ### Added

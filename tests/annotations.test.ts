@@ -7,6 +7,7 @@ import { AdGuardSyncClient } from "../src/adguard-sync-client.ts";
 import { createMcpServer } from "../src/server.ts";
 import { TOOL_TIERS } from "../src/tools/annotations.ts";
 import { jsonToolResult } from "../src/tools/_util.ts";
+import { startFakeAdGuard } from "./fake-adguard.ts";
 import { buildAllTools } from "../src/tools/index.ts";
 
 const dummy = () => new AdGuardClient({ url: "http://x", username: "u", password: "p" });
@@ -60,5 +61,31 @@ describe("jsonToolResult byte cap", () => {
     expect(text).toContain("[truncated: output was");
     expect(result.structuredContent).toMatchObject({ truncated: true, maxBytes: 90_000 });
     expect(result).not.toHaveProperty("details");
+  });
+});
+
+describe("error result byte cap", () => {
+  it("truncates an oversize upstream error body instead of returning it whole", async () => {
+    const fake = await startFakeAdGuard([
+      { method: "GET", path: "/control/status", status: 400, body: { message: "x".repeat(200_000) } },
+    ]);
+    const server = createMcpServer({
+      ADGUARD_PRIMARY_URL: fake.baseUrl,
+      ADGUARD_PRIMARY_USERNAME: "u",
+      ADGUARD_PRIMARY_PASSWORD: "p",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "error-cap-test", version: "0.0.0" });
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    try {
+      const result = await client.callTool({ name: "adguard_status", arguments: {} });
+      expect(result.isError).toBe(true);
+      expect(Buffer.byteLength(JSON.stringify(result), "utf8")).toBeLessThanOrEqual(90_000);
+      expect(JSON.stringify(result.content)).toContain("[truncated: output was");
+    } finally {
+      await client.close();
+      await server.close();
+      await fake.close();
+    }
   });
 });

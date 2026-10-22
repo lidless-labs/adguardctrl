@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
+import { boundResult, fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, resolveRequestTimeoutMs, type ResolvedConfig } from "./config.ts";
@@ -8,13 +8,17 @@ import { AdGuardSyncClient } from "./adguard-sync-client.ts";
 import { registerSecret, redact } from "./security.ts";
 import { buildAllTools } from "./tools/index.ts";
 
-/** Kit fail() shape with compact JSON (not kit's 2-space pretty-print) and repo redact. */
+/** Kit fail() shape with compact JSON (not kit's 2-space pretty-print) and repo redact, under the kit's byte cap. */
 function mcpToolError(message: string) {
   const failed = fail(message);
-  return {
+  return boundResult<{
+    content: Array<{ type: "text"; text: string }>;
+    structuredContent?: Record<string, unknown>;
+    isError?: boolean;
+  }>({
     content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }],
     isError: failed.isError,
-  };
+  });
 }
 
 /** Each MCP connection owns its server, tool objects, and request handlers. */
