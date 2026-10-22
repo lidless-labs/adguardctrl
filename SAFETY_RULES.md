@@ -82,11 +82,10 @@ Before installing anything (even with user approval):
 
 ## Git Commit Rules
 
-**Never add AI attribution to commits.**
+**Attribution:**
 
-- No `Co-Authored-By` lines pointing at any AI/model/vendor.
-- No `noreply@<ai-vendor>.com` (e.g. `noreply` addresses from AI vendors) or any AI-vendor email.
-- No mentions of "Claude", "AI", "GPT", "Anthropic", "OpenAI", or the agent's own name in commit messages.
+- End every commit message with exactly `Co-Authored-By: Claude Duet <noreply@anthropic.com>`.
+- Every PR body states what changed, why, and the exact test commands run with their results, and ends with the line `Opened by Claude Duet`.
 
 **Commit style:**
 

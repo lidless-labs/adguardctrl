@@ -5,9 +5,13 @@ See CONTRIBUTING.md for what lands easily and what needs an issue first.
 
 ## What and why
 
-<!-- One or two sentences on the user-visible change and the problem it solves. -->
+<!-- What changed and why: one or two sentences on the user-visible change and the problem it solves. -->
 
 Closes #
+
+## Tests run
+
+<!-- The exact commands you ran and their results, e.g. `./scripts/verify`: typecheck clean, N tests passed, build succeeded. -->
 
 ## Type of change
 
@@ -25,4 +29,4 @@ Closes #
 - [ ] Updated the `Unreleased` section of `CHANGELOG.md` for any user-visible effect
 - [ ] README tool counts and tier lists stay in sync with `buildAllTools()`
 - [ ] No personal details, real hostnames, real AdGuard Home URLs, credentials, or unredacted absolute paths in code, tests, docs, or this PR (the `content-guard` hook will fail otherwise)
-- [ ] Conventional commit messages, no AI co-authorship trailers
+- [ ] Conventional commit messages, each ending with `Co-Authored-By: Claude Duet <noreply@anthropic.com>`

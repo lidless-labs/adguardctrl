@@ -20,7 +20,8 @@ adguard-mcp is an MCP server that exposes AdGuard Home and AdGuardHome Sync cont
 - Personal details, hostnames, account IDs, live AdGuard Home URLs, or real credentials in code, tests, or docs. Use RFC 5737 documentation IPs (`192.0.2.x`) and placeholder names. The pre-push `content-guard` hook will block anything else.
 - A write or destructive tool that issues its network request without first calling its gate (`assertConfirmedWrite` for Tier 2, `assertDestructive` for Tier 3).
 - A tool that forwards `instance`, `confirm`, or `destructive` into an AdGuard Home request body. Strip gate-only fields first.
-- AI-co-authorship trailers on commits (`Co-Authored-By: <model>`). Conventional commits only.
+- Commits that are not conventional commits, or that do not end with the trailer line `Co-Authored-By: Claude Duet <noreply@anthropic.com>`.
+- A pull request whose body does not say what changed, why, and the exact test commands you ran with their results.
 
 ## Local dev
 
