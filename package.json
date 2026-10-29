@@ -50,7 +50,7 @@
     }
   },
   "devDependencies": {
-    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#1505318b2625fc273c51018389e2c61677e073d7",
+    "@lidless-labs/effect-operator-kit": "github:lidless-labs/effect-operator-kit#5db1049f26e14bfbe49cfd9631cc84cca7f7247b",
     "@types/node": "^25.6.2",
     "openclaw": "^2026.4.22",
     "tsup": "^8.4.0",
