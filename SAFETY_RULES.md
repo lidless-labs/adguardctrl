@@ -11,7 +11,7 @@ Hard boundaries. These are not preferences. The content-guard pre-push hook and 
 Sanitize before publishing:
 
 - **IP addresses:** Replace real IPs with documented examples (e.g. `203.0.113.x`, `192.0.2.x`, `198.51.100.x` from RFC 5737).
-- **Internal domain names:** Replace real domains with placeholders (e.g. `corp.local` -> `lab.local`).
+- **Internal domain names:** Replace real domains with reserved documentation names such as `example.com` or `service.example`.
 - **OU names / paths:** Replace real OUs.
 - **Service account names:** Replace real accounts with descriptive placeholders.
 - **Hostnames:** Replace real hostnames with generic ones.
@@ -84,8 +84,8 @@ Before installing anything (even with user approval):
 
 **Attribution:**
 
-- End every commit message with exactly `Co-Authored-By: Claude Duet <noreply@anthropic.com>`.
-- Every PR body states what changed, why, and the exact test commands run with their results, and ends with the line `Opened by Claude Duet`.
+- End every commit message with exactly `Co-Authored-By: Claude <noreply@anthropic.com>`.
+- Every PR body states what changed, why, and the exact test commands run with their results, and ends with the line `Opened by Claude`.
 
 **Commit style:**
 
