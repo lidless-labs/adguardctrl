@@ -55,7 +55,34 @@ describe.each(factories)("%s client safety", (_name, makeClient) => {
       .rejects.toThrow("Response exceeded the byte limit.");
     expect(cancel).toHaveBeenCalledOnce();
     expect(chunks).toBeLessThan(20);
+    expect(signal).toHaveLength(1);
     expect(signal[0]).toBeInstanceOf(AbortSignal);
+    expect(signal[0].aborted).toBe(true);
+  });
+
+  it.each([0, -1, 1.5, Number.NaN])("rejects invalid byte caps without I/O: %s", async (maxResponseBytes) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(makeClient("https://adguard.example", { maxResponseBytes }).get("/status"))
+      .rejects.toThrow("Invalid HTTP request configuration.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("enforces the default 10 MiB cap on an error response", async () => {
+    let chunks = 0;
+    const cancel = vi.fn();
+    const fetchMock = vi.fn(async () => new Response(new ReadableStream({
+      pull(controller) {
+        chunks++;
+        if (chunks <= 12) controller.enqueue(new Uint8Array(1_048_576));
+        else controller.close();
+      }, cancel,
+    }), { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(makeClient("https://adguard.example").get("/status"))
+      .rejects.toThrow("Response exceeded the byte limit.");
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("bounds a native chunked response", async () => {
