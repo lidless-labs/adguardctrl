@@ -29,7 +29,8 @@ describe("withRedactedErrors", () => {
     };
 
     expect(result.isError).toBe(true);
-    expect(result.content).toHaveLength(1);
+    expect(result.content).toHaveLength(2);
+    expect(result.content[1].text).toContain("Untrusted AdGuard data");
     expect(result.content[0].type).toBe("text");
 
     const payload = JSON.parse(result.content[0].text) as { error: string };
