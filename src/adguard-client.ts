@@ -15,6 +15,8 @@ import { DEFAULT_REQUEST_TIMEOUT_MS } from "./config.ts";
 export interface AdGuardClientOptions {
   retryDelayMs?: number;
   timeoutMs?: number;
+  /** Maximum decoded response bytes. Defaults to the kit's 10 MiB cap. */
+  maxResponseBytes?: number;
 }
 
 export class AdGuardClientError extends Error {
@@ -41,6 +43,7 @@ export class AdGuardClient {
   private authHeader: string;
   private retryDelayMs: number;
   private timeoutMs: number;
+  private maxResponseBytes: number | undefined;
   private baseUrl: URL;
   private auth: AuthStrategy;
 
@@ -50,6 +53,7 @@ export class AdGuardClient {
     registerSecret(this.authHeader);
     this.retryDelayMs = opts.retryDelayMs ?? 1000;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    this.maxResponseBytes = opts.maxResponseBytes;
     this.baseUrl = baseUrlForConcat(cfg.url);
     this.auth = {
       apply: (headers) => {
@@ -80,6 +84,8 @@ export class AdGuardClient {
             baseUrl: this.baseUrl,
             auth: this.auth,
             timeoutMs: this.timeoutMs,
+            maxResponseBytes: this.maxResponseBytes,
+            redirect: "error",
             fetch: fetchWithPlainHeaders,
             redact: identityRedact,
           },
@@ -104,10 +110,13 @@ export class AdGuardClient {
         initialDelayMs: this.retryDelayMs,
         maxDelayMs: this.retryDelayMs,
         jitter: false,
+        // A failed response does not prove a mutation was not applied upstream.
         shouldRetry: (error) =>
-          error._tag === "TransportError" ||
-          error._tag === "TimeoutError" ||
-          (error._tag === "UnexpectedStatusError" && error.status >= 500),
+          ["GET", "HEAD", "OPTIONS"].includes(method) && (
+            error._tag === "TransportError" ||
+            error._tag === "TimeoutError" ||
+            (error._tag === "UnexpectedStatusError" && error.status >= 500)
+          ),
       }),
     ).pipe(
       Effect.map((res) => parseSuccessBody<T>(res.bodyText)),
@@ -128,12 +137,21 @@ function toAdGuardError(error: OperatorError): AdGuardClientError | AdGuardUnrea
     if (error.status >= 500) return new AdGuardUnreachableError(`HTTP ${error.status}`);
     return new AdGuardClientError(error.status, extractErrorMessage(error.body));
   }
-  if (error._tag === "TransportError") {
-    return new AdGuardUnreachableError(errorMessage(error.cause));
+  switch (error._tag) {
+    case "TransportError": return new AdGuardUnreachableError(redact(errorMessage(error.cause)) as string);
+    case "TimeoutError": return new AdGuardUnreachableError("The operation was aborted.");
+    case "ResponseTooLargeError": return new AdGuardUnreachableError("Response exceeded the byte limit.");
+    case "ConfigError": return new AdGuardUnreachableError(error.key === "redirect"
+      ? "HTTP redirects are disabled." : "Invalid HTTP request configuration.");
+    case "ParseError": return new AdGuardUnreachableError("Invalid upstream response.");
+    case "AuthError":
+    case "ForbiddenError":
+    case "NotFoundError": return new AdGuardUnreachableError(`HTTP ${error.status}`);
+    default: {
+      const exhaustive: never = error;
+      return exhaustive;
+    }
   }
-  if (error._tag === "TimeoutError") return new AdGuardUnreachableError("The operation was aborted.");
-  if (error._tag === "ParseError") return new AdGuardUnreachableError(error.message);
-  return new AdGuardUnreachableError(String(error));
 }
 
 function extractErrorMessage(text: string): string {
@@ -158,44 +176,10 @@ function pathForConcat(path: string): string {
   return path.replace(/^\/+/, "");
 }
 
-/**
- * Wraps fetch so the returned Promise does not resolve until the response body
- * has been fully read.  The AbortController signal created by fetchWithTimeout
- * (in effect-operator-kit) therefore remains active during body consumption,
- * which means a stalled response body is cancelled by the configured timeout.
- */
+/** Convert headers for existing consumers without reading the body or replacing the kit's abort signal. */
 async function fetchWithPlainHeaders(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> {
   const headers = init?.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init?.headers;
-  const signal = init?.signal as AbortSignal | undefined;
-  const response = await fetch(input.toString(), { ...init, headers });
-  const bodyText = await new Promise<string>((resolve, reject) => {
-    const abortError = (): Error =>
-      Object.assign(new Error("The operation was aborted"), { name: "AbortError" });
-    if (signal?.aborted) {
-      // Release the socket instead of leaving an unread body behind.
-      void response.body?.cancel().catch(() => {});
-      reject(abortError());
-      return;
-    }
-    const onAbort = (): void => {
-      // Rejecting alone leaves response.text() reading in the background, so the
-      // stalled body we timed out on keeps consuming the connection. Cancelling
-      // the stream is what actually frees it.
-      void response.body?.cancel().catch(() => {});
-      reject(abortError());
-    };
-    signal?.addEventListener("abort", onAbort, { once: true });
-    response.text().then(
-      (text) => { signal?.removeEventListener("abort", onAbort); resolve(text); },
-      (err: unknown) => { signal?.removeEventListener("abort", onAbort); reject(err as Error); },
-    );
-  });
-  // statusText is carried across too; callers surface it in error messages.
-  return new Response(bodyText, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
+  return fetch(input.toString(), { ...init, headers });
 }
 
 function parseSuccessBody<T>(text: string): T {

@@ -7,7 +7,7 @@ Mirrors the published pattern of `solomonneas/postiz-mcp`, `solomonneas/jellyfin
 
 ## Problem
 
-AdGuard Home runs on the home network (one instance at 192.168.1.10 and a second instance at 192.168.1.11). Day-to-day touchpoints are infrequent but repetitive: add a `@@||t.co^` allow exception when a service breaks, audit recent sinkholes after a job-site fails to load, block youtube on a specific client for an evening, subscribe a new filter list. Each of these requires the operator to open the AdGuard web UI on each instance, click through the same flows by hand, and remember to mirror the change across both boxes when the rule should apply everywhere.
+AdGuard Home runs on the home network (illustrated here with reserved documentation addresses: one instance at 192.0.2.10 and a second instance at 192.0.2.11). Day-to-day touchpoints are infrequent but repetitive: add a `@@||t.co^` allow exception when a service breaks, audit recent sinkholes after a job-site fails to load, block youtube on a specific client for an evening, subscribe a new filter list. Each of these requires the operator to open the AdGuard web UI on each instance, click through the same flows by hand, and remember to mirror the change across both boxes when the rule should apply everywhere.
 
 There is no agent-driven surface today. Claude cannot answer "block youtube on the family laptop tonight" or "show me the most-blocked domains in the last 6 hours" without the operator copy-pasting from the UI. There is also no programmatic way to enforce a write-safety policy beyond user discipline: a single mis-click in the UI can disable filtering globally.
 
@@ -93,11 +93,11 @@ export const tool = {
 `src/config.ts` reads env once at startup:
 
 ```
-ADGUARD_PRIMARY_URL=http://192.168.1.10
+ADGUARD_PRIMARY_URL=http://192.0.2.10
 ADGUARD_PRIMARY_USERNAME=admin
 ADGUARD_PRIMARY_PASSWORD=<set in .env>
 
-ADGUARD_SECONDARY_URL=http://192.168.1.11        (optional)
+ADGUARD_SECONDARY_URL=http://192.0.2.11        (optional)
 ADGUARD_SECONDARY_USERNAME=<set in .env>
 ADGUARD_SECONDARY_PASSWORD=<set in .env>
 

@@ -1,3 +1,4 @@
+import { UNTRUSTED_DATA_NOTICE } from "./_util.ts";
 import { annotationsFromTiers, assertNoDrift, type ToolAnnotations, type ToolTier } from "@lidless-labs/effect-operator-kit";
 
 /**
@@ -68,7 +69,7 @@ export function annotationsFor(name: string): ToolAnnotations {
 }
 
 /** Attach each tool's declared annotations, failing when a tool and the registry disagree. */
-export function withAnnotations<T extends { name: string }>(tools: T[]): Array<T & { annotations: ToolAnnotations }> {
+export function withAnnotations<T extends { name: string; description: string }>(tools: T[]): Array<T & { annotations: ToolAnnotations }> {
   assertNoDrift(tools.map((t) => t.name), TOOL_TIERS);
-  return tools.map((t) => ({ ...t, annotations: annotationsFor(t.name) }));
+  return tools.map((t) => ({ ...t, description: `${t.description} ${UNTRUSTED_DATA_NOTICE}`, annotations: annotationsFor(t.name) }));
 }

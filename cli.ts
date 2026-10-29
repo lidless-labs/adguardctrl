@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
+import { boundText, DEFAULT_MAX_OUTPUT_BYTES, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { AdGuardClient } from "./src/adguard-client.ts";
 import { AdGuardSyncClient } from "./src/adguard-sync-client.ts";
 import {
@@ -10,6 +10,8 @@ import {
   getSyncConfig,
   resolveRequestTimeoutMs,
 } from "./src/config.ts";
+import { redact } from "./src/security.ts";
+import { jsonToolResult, UNTRUSTED_DATA_NOTICE } from "./src/tools/_util.ts";
 import { redactTlsSecrets } from "./src/tools/adguard_tls_status.ts";
 
 const VERSION = "0.3.2";
@@ -490,16 +492,32 @@ export async function run(argv: string[], deps: CliDeps): Promise<number> {
   try {
     return await dispatch(parsed, deps);
   } catch (error) {
-    deps.err(operatorErrorMessage(error));
+    deps.err(boundedUntrustedText(redact(operatorErrorMessage(error)) as string));
+    deps.err(UNTRUSTED_DATA_NOTICE);
     return 1;
   }
 }
 
 type DispatchKind = Exclude<Parsed["kind"], "help" | "version" | "mcp">;
 
+/** Reserve provenance bytes before applying the text cap. */
+function boundedUntrustedText(text: string): string {
+  const escaped = text.replace(/[<>&\u0000-\u0008\u000b-\u001f\u007f\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  return boundText(escaped, DEFAULT_MAX_OUTPUT_BYTES - Buffer.byteLength(UNTRUSTED_DATA_NOTICE) - 1).text;
+}
+
 async function dispatch(parsed: Extract<Parsed, { kind: DispatchKind }>, deps: CliDeps): Promise<number> {
   const emit = (raw: unknown, render: () => string, json: boolean): number => {
-    deps.out(json ? JSON.stringify(raw, null, 2) : render());
+    if (json) {
+      const result = jsonToolResult(raw);
+      // Keep --json parseable even when the original response is too large.
+      deps.out(result.structuredContent?.truncated
+        ? JSON.stringify(result.structuredContent, null, 2) : result.content[0].text);
+      deps.err(UNTRUSTED_DATA_NOTICE);
+    } else {
+      deps.out(`${UNTRUSTED_DATA_NOTICE}\n${boundedUntrustedText(render())}`);
+    }
     return 0;
   };
 
@@ -619,15 +637,14 @@ async function dispatch(parsed: Extract<Parsed, { kind: DispatchKind }>, deps: C
     case "sync-health": {
       const c = deps.makeSyncClient();
       const r = await c.head("/healthz");
-      deps.out(parsed.json ? JSON.stringify(r, null, 2) : `healthy: ${r.ok}`);
+      emit(r, () => `healthy: ${r.ok}`, parsed.json);
       return r.ok ? 0 : 1;
     }
     case "sync-logs": {
       const c = deps.makeSyncClient();
       const logs = await c.get<string>("/api/v1/logs");
       const r = { logs };
-      deps.out(parsed.json ? JSON.stringify(r, null, 2) : String(logs ?? ""));
-      return 0;
+      return emit(r, () => String(logs ?? ""), parsed.json);
     }
   }
 }

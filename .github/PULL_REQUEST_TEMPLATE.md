@@ -29,4 +29,4 @@ Closes #
 - [ ] Updated the `Unreleased` section of `CHANGELOG.md` for any user-visible effect
 - [ ] README tool counts and tier lists stay in sync with `buildAllTools()`
 - [ ] No personal details, real hostnames, real AdGuard Home URLs, credentials, or unredacted absolute paths in code, tests, docs, or this PR (the `content-guard` hook will fail otherwise)
-- [ ] Conventional commit messages, each ending with `Co-Authored-By: Claude Duet <noreply@anthropic.com>`
+- [ ] Conventional commit messages, each ending with `Co-Authored-By: Claude <noreply@anthropic.com>`

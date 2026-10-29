@@ -1,3 +1,4 @@
+import { jsonToolResult } from "./src/tools/_util.ts";
 // NOTE: openclaw/plugin-sdk/plugin-entry's AnyAgentTool expects
 // AgentToolResult<unknown> (with a `details` field), but our tool factories
 // return MCP-shaped { content: [{ type: "text", text }] } results so the same
@@ -5,7 +6,7 @@
 // The runtime registration is duck-typed and works fine; we cast through
 // `unknown` to bridge the intentional structural mismatch.
 import { Buffer } from "node:buffer";
-import { boundResult, fail, operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
+import { operatorErrorMessage } from "@lidless-labs/effect-operator-kit";
 import { definePluginEntry, type AnyAgentTool } from "openclaw/plugin-sdk/plugin-entry";
 import { resolveInstances, resolveSyncConfig, getInstanceConfig, getSyncConfig, resolveRequestTimeoutMs, type ResolvedConfig, type SyncConfig } from "./src/config.ts";
 import { AdGuardClient } from "./src/adguard-client.ts";
@@ -19,17 +20,9 @@ interface ToolLike {
   [key: string]: unknown;
 }
 
-/** Kit fail() shape with compact JSON (not kit's 2-space pretty-print) and repo redact, under the kit's byte cap. */
+/** Keep the compact JSON error shape, redaction, provenance, and byte cap. */
 function mcpToolError(message: string) {
-  const failed = fail(message);
-  return boundResult<{
-    content: Array<{ type: "text"; text: string }>;
-    structuredContent?: Record<string, unknown>;
-    isError?: boolean;
-  }>({
-    content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }],
-    isError: failed.isError,
-  });
+  return jsonToolResult({ error: message }, true);
 }
 
 export function withRedactedErrors<T extends ToolLike>(tool: T): T {

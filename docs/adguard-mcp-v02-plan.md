@@ -151,13 +151,13 @@ describe("adguard_check_host", () => {
       { method: "GET", path: "/control/filtering/check_host", status: 200, body: { reason: "FilteredBlackList", rules: [{ filter_list_id: 1, text: "||youtube.com^" }], service_name: "", cname: "", ip_addrs: [] } },
     ]);
     const tool = createAdguardCheckHostTool(() => new AdGuardClient({ url: fake!.baseUrl, username: "u", password: "p" }));
-    const r = await tool.execute("id", { host: "youtube.com", qtype: "A", client: "192.168.1.5" });
+    const r = await tool.execute("id", { host: "youtube.com", qtype: "A", client: "192.0.2.5" });
     const payload = JSON.parse(r.content[0].text);
     expect(payload.reason).toBe("FilteredBlackList");
     const req = fake.requests[0];
     expect(req.path).toMatch(/^\/control\/filtering\/check_host\?/);
     expect(req.path).toContain("name=youtube.com");
-    expect(req.path).toContain("client=192.168.1.5");
+    expect(req.path).toContain("client=192.0.2.5");
     expect(req.path).toContain("qtype=A");
   });
 
@@ -331,7 +331,7 @@ afterEach(async () => { if (fake) await fake.close(); fake = null; });
 
 describe("adguard_get_dns_config", () => {
   it("returns DNS config including upstreams + cache settings", async () => {
-    const payload = { upstream_dns: ["1.1.1.1", "8.8.8.8"], bootstrap_dns: ["9.9.9.9"], cache_size: 4194304, blocking_mode: "default", default_local_ptr_upstreams: ["192.168.1.1"] };
+    const payload = { upstream_dns: ["1.1.1.1", "8.8.8.8"], bootstrap_dns: ["9.9.9.9"], cache_size: 4194304, blocking_mode: "default", default_local_ptr_upstreams: ["192.0.2.1"] };
     fake = await startFakeAdGuard([
       { method: "GET", path: "/control/dns_info", status: 200, body: payload },
     ]);
@@ -937,11 +937,11 @@ Update the assertion that counts tools-registered from `15` to `28`. If the test
 After all three subagents complete, run Codex review on the full diff:
 
 ```bash
-cd /home/user/repos/adguard-mcp
+cd adguardctrl
 git log --oneline -5  # confirm 3 commits from phases 1-3
 git diff main...HEAD > /tmp/adguard-v02-diff.txt
 codex exec --sandbox read-only --ephemeral --ignore-rules --skip-git-repo-check -m gpt-5.5 - <<'EOF'
-Review the diff at /tmp/adguard-v02-diff.txt for solomonneas/adguard-mcp v0.2. This adds 13 tools across read/safe-write/destructive tiers to an MCP server. Spec at /home/user/repos/adguard-mcp/docs/adguard-mcp-v02-design.md.
+Review the diff at /tmp/adguard-v02-diff.txt for solomonneas/adguard-mcp v0.2. This adds 13 tools across read/safe-write/destructive tiers to an MCP server. Spec at docs/adguard-mcp-v02-plan.md
 
 Focus on:
 1. AGH API path correctness: querylog_clear and stats_reset MUST use underscores. blocked_services/update MUST be PUT (not POST). update_client body MUST be nested {name, data}.
