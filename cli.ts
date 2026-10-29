@@ -10,6 +10,7 @@ import {
   getSyncConfig,
   resolveRequestTimeoutMs,
 } from "./src/config.ts";
+import { redact } from "./src/security.ts";
 import { jsonToolResult, UNTRUSTED_DATA_NOTICE } from "./src/tools/_util.ts";
 import { redactTlsSecrets } from "./src/tools/adguard_tls_status.ts";
 
@@ -491,12 +492,20 @@ export async function run(argv: string[], deps: CliDeps): Promise<number> {
   try {
     return await dispatch(parsed, deps);
   } catch (error) {
-    deps.err(operatorErrorMessage(error));
+    deps.err(boundedUntrustedText(redact(operatorErrorMessage(error)) as string));
+    deps.err(UNTRUSTED_DATA_NOTICE);
     return 1;
   }
 }
 
 type DispatchKind = Exclude<Parsed["kind"], "help" | "version" | "mcp">;
+
+/** Reserve provenance bytes before applying the text cap. */
+function boundedUntrustedText(text: string): string {
+  const escaped = text.replace(/[<>&\u0000-\u0008\u000b-\u001f\u007f\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  return boundText(escaped, DEFAULT_MAX_OUTPUT_BYTES - Buffer.byteLength(UNTRUSTED_DATA_NOTICE) - 1).text;
+}
 
 async function dispatch(parsed: Extract<Parsed, { kind: DispatchKind }>, deps: CliDeps): Promise<number> {
   const emit = (raw: unknown, render: () => string, json: boolean): number => {
@@ -507,10 +516,7 @@ async function dispatch(parsed: Extract<Parsed, { kind: DispatchKind }>, deps: C
         ? JSON.stringify(result.structuredContent, null, 2) : result.content[0].text);
       deps.err(UNTRUSTED_DATA_NOTICE);
     } else {
-      const text = render().replace(/[<>&\u0000-\u0008\u000b-\u001f\u007f\u2028\u2029]/g,
-        (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
-      const prefix = `${UNTRUSTED_DATA_NOTICE}\n`;
-      deps.out(prefix + boundText(text, DEFAULT_MAX_OUTPUT_BYTES - Buffer.byteLength(prefix)).text);
+      deps.out(`${UNTRUSTED_DATA_NOTICE}\n${boundedUntrustedText(render())}`);
     }
     return 0;
   };
